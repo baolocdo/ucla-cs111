@@ -30,3 +30,6 @@
 
 # Debug files
 *.dSYM/
+
+# Project 0 output file
+/project0/lab0
