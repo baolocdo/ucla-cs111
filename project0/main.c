@@ -11,9 +11,9 @@
 
 static int segfault_flag = 0;
 
-void sigsegv_handler(int signum)
+static void sigsegv_handler(int signo)
 {
-  fprintf(stderr, "Handler caught a SIGSEGV signal!");
+  fprintf(stderr, "Handler caught a SIGSEGV signal!\n");
   exit(3);
 }
 
@@ -69,15 +69,12 @@ int main (int argc, char **argv)
         }
 
         break;
-      
-      default:
-        abort();
-      }
+    }
   }
 
   if (segfault_flag) {
-    char *buf = NULL;
-    *buf = 'a';
+    char *segfault_char = NULL;
+    *segfault_char = 3;
   }
   
   int read_size = 0;
