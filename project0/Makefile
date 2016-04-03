@@ -18,4 +18,4 @@ clean:
 	rm -rf *.o
 dist:
 	rm -rf lab0-404380075.tar.gz
-	tar -cf lab0-404380075.tar.gz *.c Makefile *.png readme.md
+	tar -cf lab0-404380075.tar.gz *.c Makefile *.png README
