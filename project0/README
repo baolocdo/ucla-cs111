@@ -14,4 +14,6 @@ Two simple integration test cases are included in Makefile.
 * First one with input and output files specified, and check if the input and output are different with _diff_;
 * Second one checks segfault and catch, and see if the command returns an expected value of 3.
 
+Upon running these tests, an error message will be printed if commands yield unexpected results; Otherwise only test names will be printed.
+
 Other test cases, such as different orders and combination of args, non-existent input file and error opening write file, are tested manually.
