@@ -5,6 +5,7 @@ Project 0
 
 * This program does not consider "output file already exists" an error. If an output file already exists, it will get overwritten.
 * This program uses an array as buffer for _read_ and _write_ calls. May or may not violate what's described in [this thread](https://piazza.com/class/imeeybs22db6n?cid=29)
+* This program is based on the man pages for given calls, and example open/creat code in the assignment description.
 
 *** Testing methodology ***
 
