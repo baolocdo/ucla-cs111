@@ -1,0 +1,16 @@
+Project 0
+==================
+
+*** Notes ***
+
+* This program does not consider "output file already exists" an error. If an output file already exists, it will get overwritten.
+* This program uses an array as buffer for _read_ and _write_ calls. May or may not violate what's described in [this thread](https://piazza.com/class/imeeybs22db6n?cid=29)
+
+*** Testing methodology ***
+
+Two simple integration test cases are included in Makefile. 
+
+* First one with input and output files specified, and check if the input and output are different with _diff_;
+* Second one checks segfault and catch, and see if the command returns an expected value of 3.
+
+Other test cases, such as different orders and combination of args, non-existent input file and error opening write file, are tested manually.
