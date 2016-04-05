@@ -4,7 +4,10 @@ Project 0
 *** Notes ***
 
 * This program does not consider "output file already exists" as an error. If an output file already exists, it will get overwritten.
+* This program does not check for error returns of _read_ or _write_ calls, as the return value or handling method is not specified in the spec for those cases.
 * This program uses an array as buffer for _read_ and _write_ calls, which may or may not violate what's described in [this thread](https://piazza.com/class/imeeybs22db6n?cid=29)
+* Since only well-formed inputs are tested, we don't handle the cases where an unexpected flag, or unexpected characters appear in the argv.
+* The segfault flag takes precedence in this implementation: if input, output as well as segfault are provided, input and output files will be checked (see if input can be open'ed, and if output can be creat'ed), but they won't be read from or written to as segfault's generated before the read and write commands.
 * This program is based on the man pages for given calls, and example open/creat code in the assignment description.
 * _Make_ command uses -g flag, so that debug symbols are generated for gdb.
 * Among the attached screenshots, "gdb_backtrace" shows the backtrace with "bt full" and "bt" commands in the segfault case; and "gdb_breakpoint" sets a breakpoint before the line causing the segmentation fault, runs the program till that breakpoint, and steps from there.
