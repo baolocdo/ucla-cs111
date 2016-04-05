@@ -51,7 +51,7 @@ int main (int argc, char **argv)
         } else {
           fprintf(stderr, "Unable to open the specified input file: %s\n", optarg);
           perror("Unable to open the specified input file");
-          exit(2);
+          exit(1);
         }
 
         break;

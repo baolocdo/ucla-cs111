@@ -31,5 +31,8 @@
 # Debug files
 *.dSYM/
 
+# Mac OSX files
+.DS_Store
+
 # Project 0 output file
 /project0/lab0

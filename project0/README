@@ -3,17 +3,19 @@ Project 0
 
 *** Notes ***
 
-* This program does not consider "output file already exists" an error. If an output file already exists, it will get overwritten.
-* This program uses an array as buffer for _read_ and _write_ calls. May or may not violate what's described in [this thread](https://piazza.com/class/imeeybs22db6n?cid=29)
+* This program does not consider "output file already exists" as an error. If an output file already exists, it will get overwritten.
+* This program uses an array as buffer for _read_ and _write_ calls, which may or may not violate what's described in [this thread](https://piazza.com/class/imeeybs22db6n?cid=29)
 * This program is based on the man pages for given calls, and example open/creat code in the assignment description.
+* _Make_ command uses -g flag, so that debug symbols are generated for gdb.
+* Among the attached screenshots, "gdb_backtrace" shows the backtrace with "bt full" and "bt" commands in the segfault case; and "gdb_breakpoint" sets a breakpoint before the line causing the segmentation fault, runs the program till that breakpoint, and steps from there.
 
 *** Testing methodology ***
 
 Two simple integration test cases are included in Makefile. 
 
-* First one with input and output files specified, and check if the input and output are different with _diff_;
-* Second one checks segfault and catch, and see if the command returns an expected value of 3.
+* First one has input and output files specified, and checks if the input and output are different with _diff_;
+* Second one checks segfault and catch, and see if the execution of this program returns an expected value of 3.
 
-Upon running these tests, an error message will be printed if commands yield unexpected results; Otherwise only test names will be printed.
+Upon running these tests, an error message will be printed if commands yield unexpected results; Otherwise we succeed silently, and only test names will be printed.
 
-Other test cases, such as different orders and combination of args, non-existent input file and error opening write file, are tested manually.
+Other test cases, such as different orders and combination of arguments, non-existent input file and error opening output file, are tested manually.
