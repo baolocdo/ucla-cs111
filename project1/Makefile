@@ -1,5 +1,5 @@
 main: main.c
-	gcc -o lab1a -g main.c
+	gcc -o lab1a -g main.c -lpthread
 clean:
 	rm -rf lab0
 	rm -rf *.o

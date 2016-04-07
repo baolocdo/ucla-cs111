@@ -5,7 +5,10 @@
 
 #include <termios.h>
 
+#include <pthread.h>
+
 #define INPUT_BUFFER_SIZE 2
+#define INPUT_BUFFER_SIZE_PART_TWO 1024
 
 static int shell_flag = 0;
 char line_feed[2] = {0x0D, 0x0A};
@@ -32,7 +35,22 @@ int map_and_write_buffer(char * buffer, int current_buffer_len)
   return res;
 }
 
-int main (int argc, char **argv)
+void *read_input_from_child(void *param)
+{
+  int *pipe = (int *)param;
+  char buffer[INPUT_BUFFER_SIZE_PART_TWO] = {};
+
+  while (1) {
+    int read_size = read(*pipe, buffer, INPUT_BUFFER_SIZE_PART_TWO);
+    if (read_size > 0) {
+      write(1, buffer, INPUT_BUFFER_SIZE_PART_TWO);
+    }
+  }
+
+  return NULL;
+}
+
+int main(int argc, char **argv)
 {
   int c;
   static struct option long_options[] = {
@@ -89,14 +107,64 @@ int main (int argc, char **argv)
           printf("%d\n", buffer[i]);
         }
         */
-      } else {
-
       }
     }
     
     tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
-  } else {
-    
+  }  else {
+    // stdout pipe from the child process's perspective 
+    int stdout_pipe[2];
+    int stdin_pipe[2];
+
+    if (pipe(stdout_pipe) == -1 || pipe(stdout_pipe) == -1) {
+      return -1;
+    }
+
+    pid_t child_pid;
+    child_pid = fork();
+
+    if (child_pid >= 0) {
+      if(child_pid == 0) {
+        printf("Child Process\n");
+        close(stdout_pipe[0]);
+        close(stdin_pipe[0]);
+
+        char *myargs[2];
+        myargs[0] = "/bin/bash";
+        myargs[1] = NULL;
+        int rc = execvp(myargs[0], myargs);
+
+        close(0);
+        dup(stdout_pipe[1]);
+        close(stdout_pipe[1]);
+
+        close(1);
+        dup(stdin_pipe[1]);
+        close(2);
+        dup(stdin_pipe[1]);
+        close(stdin_pipe[1]);
+
+      } else {
+        printf("Parent Process\n");
+        close(stdout_pipe[1]);
+        close(stdin_pipe[1]);
+        char buffer[INPUT_BUFFER_SIZE_PART_TWO] = {};
+
+        // We create a thread to handle the input pipe from child process
+        pthread_t child_input_thread;
+        pthread_create(&child_input_thread, NULL, read_input_from_child, &stdin_pipe[0]);
+
+        while (1) {
+          int read_size = read(0, buffer, INPUT_BUFFER_SIZE_PART_TWO);
+          if (read_size > 0) {
+            write(1, buffer, INPUT_BUFFER_SIZE_PART_TWO);
+            write(stdout_pipe[0], buffer, INPUT_BUFFER_SIZE_PART_TWO);
+          }
+        }
+      }
+    } else {
+      printf("Fork failed\n");
+    }
   }
 
   return 0;
