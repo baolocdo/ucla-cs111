@@ -17,7 +17,8 @@ int map_and_write_buffer(char * buffer, int current_buffer_len)
 {
   int res = 0;
   int temp = 0;
-  for (int i = 0; i < current_buffer_len; i++) {
+  int i = 0;
+  for (i = 0; i < current_buffer_len; i++) {
     if (*(buffer + i) == 0x0D || *(buffer + i) == 0x0A) {
       //printf("Map happened when printing!\n");
       temp = write(1, line_feed, 2);
@@ -43,7 +44,7 @@ void *read_input_from_child(void *param)
   while (1) {
     int read_size = read(*pipe, buffer, INPUT_BUFFER_SIZE_PART_TWO);
     if (read_size > 0) {
-      write(1, buffer, INPUT_BUFFER_SIZE_PART_TWO);
+      write(1, buffer, read_size);
     }
   }
 
@@ -65,9 +66,10 @@ int main(int argc, char **argv)
       break;
   }
 
+  struct termios oldattr, newattr;
+
   if (!shell_flag) {
     printf("part one!\n");
-    struct termios oldattr, newattr;
     char buffer[INPUT_BUFFER_SIZE] = {};
 
     if (tcgetattr(STDIN_FILENO, &oldattr) == -1) {
@@ -112,6 +114,7 @@ int main(int argc, char **argv)
     
     tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
   }  else {
+
     // stdout pipe from the child process's perspective 
     int stdout_pipe[2];
     int stdin_pipe[2];
@@ -129,11 +132,6 @@ int main(int argc, char **argv)
         close(stdout_pipe[0]);
         close(stdin_pipe[0]);
 
-        char *myargs[2];
-        myargs[0] = "/bin/bash";
-        myargs[1] = NULL;
-        int rc = execvp(myargs[0], myargs);
-
         close(0);
         dup(stdout_pipe[1]);
         close(stdout_pipe[1]);
@@ -144,6 +142,10 @@ int main(int argc, char **argv)
         dup(stdin_pipe[1]);
         close(stdin_pipe[1]);
 
+        char *myargs[2];
+        myargs[0] = "/bin/bash";
+        myargs[1] = NULL;
+        int rc = execvp(myargs[0], myargs);
       } else {
         printf("Parent Process\n");
         close(stdout_pipe[1]);
@@ -157,8 +159,8 @@ int main(int argc, char **argv)
         while (1) {
           int read_size = read(0, buffer, INPUT_BUFFER_SIZE_PART_TWO);
           if (read_size > 0) {
-            write(1, buffer, INPUT_BUFFER_SIZE_PART_TWO);
-            write(stdout_pipe[0], buffer, INPUT_BUFFER_SIZE_PART_TWO);
+            write(1, buffer, read_size);
+            write(stdout_pipe[0], buffer, read_size);
           }
         }
       }
