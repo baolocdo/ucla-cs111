@@ -8,7 +8,7 @@
 
 #include <pthread.h>
 
-#define INPUT_BUFFER_SIZE 2
+#define INPUT_BUFFER_SIZE 1
 #define INPUT_BUFFER_SIZE_PART_TWO 1024
 
 static int shell_flag = 0;
@@ -78,6 +78,8 @@ int main(int argc, char **argv)
 
     }
     newattr = oldattr;
+
+    // This is the expected flags
     newattr.c_lflag &= ~(ICANON | ECHO);
 
     if (tcsetattr(STDIN_FILENO, TCSANOW, &newattr) == -1) {
@@ -124,7 +126,11 @@ int main(int argc, char **argv)
     int stdout_pipe[2];
     int stdin_pipe[2];
 
-    if (pipe(stdin_pipe) == -1 || pipe(stdout_pipe) == -1) {
+    if (pipe(stdin_pipe) == -1) {
+      return -1;
+    }
+
+    if (pipe(stdout_pipe) == -1) {
       return -1;
     }
 
@@ -134,7 +140,7 @@ int main(int argc, char **argv)
     if (child_pid >= 0) {
       if(child_pid == 0) {
         printf("Child Process\n");
-        close(stdout_pipe[0]);
+        close(stdout_pipe[1]);
         close(stdin_pipe[0]);
 
         close(1);
@@ -144,27 +150,27 @@ int main(int argc, char **argv)
         close(stdin_pipe[1]);
 
         close(0);
-        dup(stdout_pipe[1]);
-        close(stdout_pipe[1]);
+        dup(stdout_pipe[0]);
+        close(stdout_pipe[0]);
 
-        int rc = execl("/bin/bash", "bash", NULL);
+        int rc = execl("/bin/bash", "/bin/bash", NULL);
       } else {
         printf("Parent Process\n");
-        close(stdout_pipe[1]);
+        close(stdout_pipe[0]);
         close(stdin_pipe[1]);
-        char buffer[INPUT_BUFFER_SIZE_PART_TWO] = {"ls\n"};
+        char buffer[INPUT_BUFFER_SIZE_PART_TWO] = {};
 
         // We create a thread to handle the input pipe from child process
         pthread_t child_input_thread;
         pthread_create(&child_input_thread, NULL, read_input_from_child, &stdin_pipe[0]);
         
-        write(stdout_pipe[0], buffer, 4);
+        //write(stdout_pipe[0], buffer, 4);
 
         while (1) {
           int read_size = read(0, buffer, INPUT_BUFFER_SIZE_PART_TWO);
           if (read_size > 0) {
             write(1, buffer, read_size);
-            write(stdout_pipe[0], buffer, read_size);
+            write(stdout_pipe[1], buffer, read_size);
           }
         }
       }
