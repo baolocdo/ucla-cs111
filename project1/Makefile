@@ -3,6 +3,7 @@ main: main.c
 clean:
 	rm -rf lab1a
 	rm -rf *.o
+	rm -rf *.out
 dist:
 	rm -rf lab1a-404380075.tar.gz
 	tar -zcf lab1a-404380075.tar.gz *.c Makefile README
