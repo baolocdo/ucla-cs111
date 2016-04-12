@@ -5,7 +5,7 @@ Project 1A
 
 * This program is based on the Linux manual example of setting and restoring terminal modes, and Linux manual example of using fork-pipe-exec.
 * This program uses a size 1 buffer by default. While the buffer size can be set to a larger number, we shouldn't expect to see big differences in the output.
-* The conventions for a pipe's reading (0) and writing end (1) took a little time debugging.
+* For part two, as only the main thread triggers the program exit (to avoid potential multiple exit calls on different threads), one character needs to be read in before shell EOF or SIGPIPE is detected: for example, terminal with ISIG receives Ctrl+C, shell would receive SIGINT, and then it's up to the user to type another character before the program exits and prints the exit status of shell. (this may or may not be the expected behavior, doesn't seem to be clear in spec)
 * During the TA session, there was mention of the usage of ISIG terminal flag, more pthread functions such as pthread_join and pthread_cancel, in order to be able differentiate the SIGPIPE and EOF from the shell. With the change of spec, this no longer seems needed.
 
 *** Testing methodology ***
