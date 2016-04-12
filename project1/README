@@ -21,4 +21,5 @@ The Makefile did not include test cases.
   * Prof. Eggert's CS131 specs (http://web.cs.ucla.edu/classes/fall15/cs131/homework.html)
   * Prof. Condie's CS143 specs (https://sites.google.com/site/cs143databasesystems/archive/lab1)
 * As an example of the confusing spec: first version of this code writes from buffer, one character at a time, only when the buffer's full or the program exits. This may or may not be what we expected, and (to me) is not clearly defined in the spec. The first few clarification threads on Piazza for this, unfortunately, still feels vague.
+* Two other potential confusions, Ctrl+C (vs SIGINT) handling, and when receive EOF or SIGPIPE from shell can be triggered, are described in comments for the code.
 * I like the change of not differentiating EOF or SIGPIPE from shell (after the change, both would cause terminal to exit with code 1). Without this change, it involves more tricks in the terminal settings and thread handling (mentioned in the last bullet in Notes as mentioned by the TA), which to me is ambiguous, and feels like getting bogged down in unnecessary and hardly applicable details.

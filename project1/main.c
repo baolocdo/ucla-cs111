@@ -52,7 +52,18 @@ int map_and_write_buffer(int fd, char * buffer, int current_buffer_len)
       } else {
         exit(0);
       }
-    } else {
+    } else if (*(buffer + i) == 3) {
+      // Receiving Ctrl + C from terminal, this can only happen when ISIG is on
+      // This code is duplicated in the SIGINT handler, in case that ISIG is off
+      // Such duplication may or may not be desired: we may want ONLY Ctrl + C to trigger SIGINT on shell, and SIGINT on terminal to behave as it should behave
+      // Or we may want BOTH Ctrl + C and SIGINT to trigger SIGINT on shell...I see this as not clearly defined by the spec...
+      if (shell_flag && shell_running) {
+        kill(shell_pid, SIGINT);
+        shell_running = 0;
+      } else {
+        temp = write(fd, buffer + i, 1);
+      }
+    }else {
       temp = write(fd, buffer + i, 1);
     }
     
@@ -229,7 +240,8 @@ int main(int argc, char **argv)
         while (1) {
           if (eof_received_from_shell) {
             // This is for removing the possibility of calling exit in both main-thread and pipe-read-thread; 
-            // This may not be ideal in the sense that read has to return first
+            // This may not be ideal in the sense that read has to return first: before EOF or SIGPIPE from shell is detected, main thread
+            // should take in a character, this may or may not be the desired behavior. I see this as being not clearly defined in spec.
             exit(1);
           }
           int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
