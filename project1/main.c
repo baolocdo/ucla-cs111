@@ -26,6 +26,9 @@ int shell_pid;
 // We kept it here only for the purpose of not sending SIGINT or SIGUP repeatly to shell after one SIGINT's already sent.
 int shell_running = 0;
 
+// EOF received
+int eof_received_from_shell = 0;
+
 // stdout pipe from the child process's perspective 
 int stdout_pipe[2];
 int stdin_pipe[2];
@@ -40,7 +43,7 @@ int map_and_write_buffer(int fd, char * buffer, int current_buffer_len)
       // This is for mapping the <cr> and <lf> characters
       temp = write(fd, line_feed, 2);
     } else if (*(buffer + i) == 4) {
-      // This is for catching the EOFs from terminal
+      // Receiving EOF from the terminal
       if (shell_flag && shell_running) {
         close(stdout_pipe[1]);
         close(stdin_pipe[0]);
@@ -103,13 +106,20 @@ void *read_input_from_child(void *param)
     if (read_size > 0) {
       int i = 0;
       for (i = 0; i < read_size; i++) {
-        // Receiving EOF from shell, essentially the same as sigpipe handler
+        // Receiving EOF "character" from shell, essentially doing the same thing the same as the sigpipe handler
         if (*(buffer + i) == 4) {
-          exit(1);
+          // We don't want to call "exit" in the pipe-read thread as well as the main thread, as multiple calls on "exit" breaks atexit
+          // so main thread handles the exit if EOF is received
+          eof_received_from_shell = 1;
         } else {
           write(1, buffer + i, 1);
         }
       }
+    } else if (!eof_received_from_shell) {
+      // Receiving EOF from shell, essentially doing the same thing the same as the sigpipe handler
+      eof_received_from_shell = 1;
+      // We don't want to call "exit" in the pipe-read thread as well as the main thread, so main thread handles the exit if EOF is received
+      //exit(1);
     }
   }
 
@@ -217,6 +227,11 @@ int main(int argc, char **argv)
         shell_running = 1;
 
         while (1) {
+          if (eof_received_from_shell) {
+            // This is for removing the possibility of calling exit in both main-thread and pipe-read-thread; 
+            // This may not be ideal in the sense that read has to return first
+            exit(1);
+          }
           int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
           if (read_size > 0) {
             // If shell is not running (killed/exits), we would receive a SIGPIPE
