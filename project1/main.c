@@ -37,9 +37,10 @@ int map_and_write_buffer(int fd, char * buffer, int current_buffer_len)
   int i = 0;
   for (i = 0; i < current_buffer_len; i++) {
     if (*(buffer + i) == 0x0D || *(buffer + i) == 0x0A) {
-      //printf("Map happened when printing!\n");
+      // This is for mapping the <cr> and <lf> characters
       temp = write(fd, line_feed, 2);
     } else if (*(buffer + i) == 4) {
+      // This is for catching the EOFs from terminal
       if (shell_flag && shell_running) {
         close(stdout_pipe[1]);
         close(stdin_pipe[0]);
@@ -49,10 +50,10 @@ int map_and_write_buffer(int fd, char * buffer, int current_buffer_len)
         exit(0);
       }
     } else {
-      //printf("%d\n", *(buffer + i));
       temp = write(fd, buffer + i, 1);
     }
     
+    // This returns the number of characters written or -1 for error, though this return value is not used by the code
     if (temp > 0) {
       res += temp;
     } else {
@@ -77,16 +78,19 @@ static void sigpipe_handler(int signo)
 
 void exit_function ()
 {
-  int shell_status;
-  waitpid(shell_pid, &shell_status, 0);
+  if (shell_flag) {
+    int shell_status;
+    waitpid(shell_pid, &shell_status, 0);
 
-  if (WIFEXITED(shell_status)) {
-    printf("Shell exits with status: %d\n", WEXITSTATUS(shell_status));
-  } else if (WIFSIGNALED(shell_status)) {
-    printf("Shell was signalled! Signo: %d\n", WTERMSIG(shell_status));
+    if (WIFEXITED(shell_status)) {
+      printf("Shell exits with status: %d\n", WEXITSTATUS(shell_status));
+    } else if (WIFSIGNALED(shell_status)) {
+      printf("Shell was signalled to exit! Signo: %d\n", WTERMSIG(shell_status));
+    }
   }
-
-  tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
+  
+  // Restore the shell status
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
 }
 
 void *read_input_from_child(void *param)
@@ -99,6 +103,7 @@ void *read_input_from_child(void *param)
     if (read_size > 0) {
       int i = 0;
       for (i = 0; i < read_size; i++) {
+        // Receiving EOF from shell, essentially the same as sigpipe handler
         if (*(buffer + i) == 4) {
           exit(1);
         } else {
@@ -127,7 +132,9 @@ int main(int argc, char **argv)
   }
 
   if (tcgetattr(STDIN_FILENO, &oldattr) == -1) {
-
+    perror("Cannot get attr of terminal!");
+    // a custom exit status for all other unexpected errors
+    exit(3);
   }
   newattr = oldattr;
 
@@ -139,7 +146,8 @@ int main(int argc, char **argv)
   newattr.c_lflag &= ~(ICANON | ECHO);
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &newattr) == -1) {
-
+    perror("Cannot set attr of terminal!");
+    exit(3);
   }
 
   char buffer[INPUT_BUFFER_SIZE] = {};
@@ -155,9 +163,9 @@ int main(int argc, char **argv)
         current_buffer_len = 0;
       }
        
-      // Do something "reasonable" when we reach the size of the buffer
-      // However, with the code as-is, the buffer's not supposed to overflow: if input's larger than buffer size, while-read will be executed again; this path's just for show.
-      // I find the "do something reasonable when buffer overflows" to be too vague, and I believe a similar view is shared by the TAs
+      // For the requirement of "do something 'reasonable' when we reach the size of the buffer"
+      // With the code as-is, the buffer's not supposed to overflow: if input's larger than buffer size, while-read will be executed again; this path's just for show.
+      // I find the "do something reasonable when buffer overflows" to be too vague
       if (current_buffer_len == INPUT_BUFFER_SIZE) {
         map_and_write_buffer(1, buffer, current_buffer_len);
         current_buffer_len = 0; 
@@ -165,11 +173,13 @@ int main(int argc, char **argv)
     }
   } else {
     if (pipe(stdin_pipe) == -1) {
-      return -1;
+      perror("Cannot instantiate stdin_pipe!");
+      exit(3);
     }
 
     if (pipe(stdout_pipe) == -1) {
-      return -1;
+      perror("Cannot instantiate stdout_pipe!");
+      exit(3);
     }
 
     pid_t child_pid;
@@ -209,17 +219,19 @@ int main(int argc, char **argv)
         while (1) {
           int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
           if (read_size > 0) {
-            map_and_write_buffer(1, buffer, read_size);
-            // if shell is not running (killed/exits), we would receive a SIGPIPE
+            // If shell is not running (killed/exits), we would receive a SIGPIPE
             write(stdout_pipe[1], buffer, read_size);
+            // We write the received character to terminal's stdout second, so in the case of SIGPIPE, the character triggering 
+            // SIGPIPE (any character you enter after the shell's killed), will not be printed
+            map_and_write_buffer(1, buffer, read_size);
           }
         }
       }
     } else {
-      printf("Fork failed\n");
+      perror("Fork failed!");
+      exit(3);
     }
   }
 
-  
   return 0;
 }
