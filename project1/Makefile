@@ -5,4 +5,4 @@ clean:
 	rm -rf *.o
 dist:
 	rm -rf lab1a-404380075.tar.gz
-	tar -cf lab1a-404380075.tar.gz *.c Makefile README
+	tar -zcf lab1a-404380075.tar.gz *.c Makefile README
