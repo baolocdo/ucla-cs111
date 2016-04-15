@@ -26,12 +26,17 @@ int shell_pid;
 // We kept it here only for the purpose of not sending SIGINT or SIGUP repeatly to shell after one SIGINT's already sent.
 int shell_running = 0;
 
-// EOF received
-int eof_received_from_shell = 0;
+pthread_mutex_t exit_mutex;
 
 // stdout pipe from the child process's perspective 
 int stdout_pipe[2];
 int stdin_pipe[2];
+
+int my_exit_call(int status) {
+  pthread_mutex_lock(&exit_mutex);
+  exit(status);
+  pthread_mutex_unlock(&exit_mutex);  
+}
 
 int map_and_write_buffer(int fd, char * buffer, int current_buffer_len)
 {
@@ -48,9 +53,9 @@ int map_and_write_buffer(int fd, char * buffer, int current_buffer_len)
         close(stdout_pipe[1]);
         close(stdin_pipe[0]);
         kill(shell_pid, SIGHUP);
-        exit(0);
+        my_exit_call(0);
       } else {
-        exit(0);
+        my_exit_call(0);
       }
     } else if (*(buffer + i) == 3) {
       // Receiving Ctrl + C from terminal, this can only happen when ISIG is on
@@ -87,7 +92,7 @@ static void sigint_handler(int signo)
 
 static void sigpipe_handler(int signo)
 {
-  exit(1);
+  my_exit_call(1);
 }
 
 void exit_function ()
@@ -119,16 +124,13 @@ void *read_input_from_child(void *param)
       for (i = 0; i < read_size; i++) {
         // Receiving EOF "character" from shell, essentially doing the same thing the same as the sigpipe handler
         if (*(buffer + i) == 4) {
-          // We don't want to call "exit" in the pipe-read thread as well as the main thread, as multiple calls on "exit" breaks atexit
-          // so main thread handles the exit if EOF is received
-          eof_received_from_shell = 1;
+          my_exit_call(0);
         } else {
           write(1, buffer + i, 1);
         }
       }
-    } else if (!eof_received_from_shell) {
-      // Receiving EOF from shell, essentially doing the same thing the same as the sigpipe handler
-      eof_received_from_shell = 1;
+    } else {
+      my_exit_call(1);
       // We don't want to call "exit" in the pipe-read thread as well as the main thread, so main thread handles the exit if EOF is received
       //exit(1);
     }
@@ -234,16 +236,11 @@ int main(int argc, char **argv)
 
         // We create a thread to handle the input pipe from child process
         pthread_t child_input_thread;
+        pthread_mutex_init(&exit_mutex, NULL);
         pthread_create(&child_input_thread, NULL, read_input_from_child, &stdin_pipe[0]);
         shell_running = 1;
 
         while (1) {
-          if (eof_received_from_shell) {
-            // This is for removing the possibility of calling exit in both main-thread and pipe-read-thread; 
-            // This may not be ideal in the sense that read has to return first: before EOF or SIGPIPE from shell is detected, main thread
-            // should take in a character, this may or may not be the desired behavior. I see this as being not clearly defined in spec.
-            exit(1);
-          }
           int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
           if (read_size > 0) {
             // If shell is not running (killed/exits), we would receive a SIGPIPE
