@@ -14,7 +14,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define INPUT_BUFFER_SIZE 1
+#define INPUT_BUFFER_SIZE 512
 #define MAX_BACK_LOG      3
 
 pthread_mutex_t exit_mutex;
@@ -30,14 +30,19 @@ struct children_struct {
   pthread_t child_output_thread;
 } children[MAX_BACK_LOG];
 
+int current_child_num = 0;
+
+// The exit call is wrapped in critical section, as it may be called from multiple threads;
+// We don't want to have the potential of calling two exits at the same time, which will mess up with the atexit's registered function.
+// This is inherited from lab1a code
 int my_exit_call(int status) {
   pthread_mutex_lock(&exit_mutex);
+  int i = 0;
+  for (i = 0; i < current_child_num; i++) {
+    kill(children[i].child_pid, SIGINT);
+  }
   exit(status);
   pthread_mutex_unlock(&exit_mutex);  
-}
-
-void exit_function ()
-{
 }
 
 void *write_output_to_child(void *param)
@@ -48,13 +53,24 @@ void *write_output_to_child(void *param)
   while (1) {
     int read_size = read(child->child_fd, buffer, INPUT_BUFFER_SIZE);
     if (read_size > 0) {
-      write(child->stdout_pipe[1], buffer, read_size);
+      int write_size = write(child->stdout_pipe[1], buffer, read_size);
+      if (write_size <= 0) {
+        // Shell write error, return 2
+        my_exit_call(2);
+      }
     } else {
+      // network read error or EOF, return 1
       my_exit_call(1);
     }
   }
 
   return NULL;
+}
+
+static void sigpipe_handler(int signo)
+{
+  // receive sigpipe, exit with status 2
+  my_exit_call(2);
 }
 
 void *read_input_from_child(void *param)
@@ -65,9 +81,14 @@ void *read_input_from_child(void *param)
   while (1) {
     int read_size = read(child->stdin_pipe[0], buffer, INPUT_BUFFER_SIZE);
     if (read_size > 0) {
-      write(child->child_fd, buffer, read_size);
+      int write_size = write(child->child_fd, buffer, read_size);
+      if (write_size <= 0) {
+        // network write error, return 2
+        my_exit_call(1);
+      }
     } else {
-      my_exit_call(1);
+      // shell read error or EOF, return 1
+      my_exit_call(2);
     }
   }
 
@@ -114,19 +135,22 @@ int main(int argc, char **argv)
     perror("ERROR on binding");
     exit(3);
   }
+  
+  pthread_mutex_init(&exit_mutex, NULL);
 
   listen(sock_fd, MAX_BACK_LOG);
   socklen_t clilen = sizeof(cli_addr);
-  int current_child_num = 0;
+
+  signal(SIGPIPE, sigpipe_handler);
   
   while (1) {
     int client_fd = accept(sock_fd, (struct sockaddr *) &cli_addr, &clilen);
-    children[current_child_num].child_fd = client_fd;
-
     if (client_fd < 0) {
        perror("ERROR on accept");
-       exit(3);
+       exit(1);
     }
+
+    children[current_child_num].child_fd = client_fd;
 
     if (pipe(children[current_child_num].stdin_pipe) == -1) {
       perror("Cannot instantiate stdin_pipe!");

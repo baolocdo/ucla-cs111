@@ -26,6 +26,9 @@ int log_fd = -1;
 
 static int encrypt_flag;
 
+// The exit call is wrapped in critical section, as it may be called from multiple threads;
+// We don't want to have the potential of calling two exits at the same time, which will mess up with the atexit's registered function.
+// This is inherited from lab1a code
 int my_exit_call(int status) {
   pthread_mutex_lock(&exit_mutex);
   exit(status);
@@ -58,6 +61,7 @@ void *read_input_from_server(void *param)
         my_exit_call(1);
       }
     } else {
+      // READ error or EOF
       my_exit_call(1);
     }
   }
@@ -134,6 +138,12 @@ int main(int argc, char **argv)
 
   while (1) {
     int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
+    int i = 0;
+    for (i = 0; i < read_size; i++) {
+      if (buffer[i] == 4) {
+        my_exit_call(0);
+      }
+    }
     buffer[read_size] = 0;
     int sent_size = write(sock_fd, buffer, read_size);
     if (sent_size > 0) {
