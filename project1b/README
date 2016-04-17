@@ -1,0 +1,25 @@
+Project 1A
+==================
+
+*** Notes ***
+
+* This program is based on the Linux manual example of setting and restoring terminal modes, and Linux manual example of using fork-pipe-exec.
+* This program uses a size 1 buffer by default. While the buffer size can be set to a larger number, we shouldn't expect to see big differences in the output.
+* For part two, as only the main thread triggers the program exit (to avoid potential multiple exit calls on different threads), one character needs to be read in before shell EOF or SIGPIPE is detected: for example, terminal with ISIG receives Ctrl+C, shell would receive SIGINT, and then it's up to the user to type another character before the program exits and prints the exit status of shell. (this may or may not be the expected behavior, doesn't seem to be clear in spec)
+* During the TA session, there was mention of the usage of ISIG terminal flag, more pthread functions such as pthread_join and pthread_cancel, in order to be able differentiate the SIGPIPE and EOF from the shell. With the change of spec, this no longer seems needed.
+
+*** Testing methodology ***
+
+The Makefile did not include test cases. 
+
+* For part 1, the tests for non-canonical mode with no echo terminal mode, long input, EOF handling are done manually.
+* For part 2, the tests for ordinary command execution, SIGINT, EOF (from shell/terminal) and SIGPIPE handling are done manually. Useful command include "ps" and "kill [-SIGNO] [PID of shell]"
+
+*** Miscellaneous notes on specifications ***
+
+* The revision of the spec took some time. While it's good that the result ends up being much more readable, I would still recommend for specs in the future to avoid using words such as "do something reasonable under certain scenarios". It would also be great if the spec gives simple examples of expected output with certain input (It's usually a bad idea to just expect people to "understand" conceptually, no matter how simple the thing is). Example of clear and helpful specs (these benefitted greatly from some simple test cases):
+  * Prof. Eggert's CS131 specs (http://web.cs.ucla.edu/classes/fall15/cs131/homework.html)
+  * Prof. Condie's CS143 specs (https://sites.google.com/site/cs143databasesystems/archive/lab1)
+* As an example of the confusing spec: first version of this code writes from buffer, one character at a time, only when the buffer's full or the program exits. This may or may not be what we expected, and (to me) is not clearly defined in the spec. The first few clarification threads on Piazza for this, unfortunately, still feels vague.
+* Two other potential confusions, Ctrl+C (vs SIGINT) handling, and when receive EOF or SIGPIPE from shell can be triggered, are described in comments for the code.
+* I like the change of not differentiating EOF or SIGPIPE from shell (after the change, both would cause terminal to exit with code 1). Without this change, it involves more tricks in the terminal settings and thread handling (mentioned in the last bullet in Notes as mentioned by the TA), which to me is ambiguous, and feels like getting bogged down in unnecessary and hardly applicable details.

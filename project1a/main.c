@@ -18,8 +18,6 @@
 static int shell_flag = 0;
 char line_feed[2] = {0x0D, 0x0A};
 
-// TODO: untested case, receive EOF from shell
-
 struct termios oldattr, newattr;
 int shell_pid;
 // Shell running is not necessary given that we expect a SIGPIPE after sending a SIGINT to terminal (, which gets forwarded to shell)
