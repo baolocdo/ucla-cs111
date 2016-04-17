@@ -17,9 +17,12 @@
 #include <pthread.h>
 
 #define INPUT_BUFFER_SIZE 1
+#define RECEIVE_BUFFER_SIZE 512
+#define LOG_MSG_BUFFER_SIZE 1024
 
 struct termios oldattr, newattr;
 pthread_mutex_t exit_mutex;
+int log_fd = -1;
 
 static int encrypt_flag;
 
@@ -38,12 +41,22 @@ void exit_function ()
 void *read_input_from_server(void *param)
 {
   int *sock_fd = (int *)param;
-  char buffer[INPUT_BUFFER_SIZE] = {};
+  char buffer[RECEIVE_BUFFER_SIZE] = {};
+  char log_msg[LOG_MSG_BUFFER_SIZE] = {};
 
   while (1) {
-    int read_size = read(*sock_fd, buffer, INPUT_BUFFER_SIZE);
+    int read_size = read(*sock_fd, buffer, RECEIVE_BUFFER_SIZE);
     if (read_size > 0) {
-      write(1, buffer, read_size);
+      buffer[read_size] = 0;
+      if (log_fd > 0) {
+        int log_msg_size = sprintf(log_msg, "RECEIVED %d BYTES: %s\n", read_size, buffer);
+        write(log_fd, log_msg, log_msg_size);
+      }
+      
+      int write_size = write(1, buffer, read_size);
+      if (write_size <= 0) {
+        my_exit_call(1);
+      }
     } else {
       my_exit_call(1);
     }
@@ -55,7 +68,6 @@ void *read_input_from_server(void *param)
 int main(int argc, char **argv)
 {
   int c;
-  int log_fd = 1;
   int port_num = 40438;
   int sock_fd = -1;
   struct sockaddr_in serv_addr;
@@ -118,9 +130,18 @@ int main(int argc, char **argv)
   pthread_create(&server_input_thread, NULL, read_input_from_server, &sock_fd);
 
   char buffer[INPUT_BUFFER_SIZE] = {};
+  char log_msg[LOG_MSG_BUFFER_SIZE] = {};
+
   while (1) {
     int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
-    write(sock_fd, buffer, read_size);
+    buffer[read_size] = 0;
+    int sent_size = write(sock_fd, buffer, read_size);
+    if (sent_size > 0) {
+      if (log_fd > 0) {
+        int log_msg_size = sprintf(log_msg, "SENT %d BYTES: %s\n", sent_size, buffer);
+        write(log_fd, log_msg, log_msg_size);
+      }
+    }
   }
   
   return 0;
