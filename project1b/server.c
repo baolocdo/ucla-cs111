@@ -164,11 +164,18 @@ int main(int argc, char **argv)
 
   if (encrypt_flag) {
     key = calloc(1, keysize);
-    strcpy(password, "A_large_key");
+    int key_file_fd = open("my.key", O_RDONLY);
+    if (key_file_fd < 0) {
+      perror("Key file read error.\n");
+    }
+    int read_size = read(key_file_fd, password, 20);
+    password[read_size] = 0;
     memmove(key, password, strlen(password));
+
     td = mcrypt_module_open("twofish", NULL, "cfb", NULL);
-    if (td==MCRYPT_FAILED) {
-       return 1;
+    if (td == MCRYPT_FAILED) {
+      perror("Mcrypt failed.\n");
+      exit(3);
     }
     IV = malloc(mcrypt_enc_get_iv_size(td));
 
@@ -179,8 +186,8 @@ int main(int argc, char **argv)
     }
     i = mcrypt_generic_init(td, key, keysize, IV);
     if (i < 0) {
-       mcrypt_perror(i);
-       exit(3);
+      mcrypt_perror(i);
+      exit(3);
     }
   }
 
@@ -212,14 +219,11 @@ int main(int argc, char **argv)
         close(children[current_child_num].stdout_pipe[1]);
         close(children[current_child_num].stdin_pipe[0]);
 
-        close(1);
-        dup(children[current_child_num].stdin_pipe[1]);
-        close(2);
-        dup(children[current_child_num].stdin_pipe[1]);
+        dup2(children[current_child_num].stdin_pipe[1], 1);
+        dup2(children[current_child_num].stdin_pipe[1], 2);
         close(children[current_child_num].stdin_pipe[1]);
 
-        close(0);
-        dup(children[current_child_num].stdout_pipe[0]);
+        dup2(children[current_child_num].stdout_pipe[0], 0);
         close(children[current_child_num].stdout_pipe[0]);
 
         int rc = execl("/bin/bash", "/bin/bash", NULL);
