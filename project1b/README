@@ -1,11 +1,22 @@
 Project 1B
 ==================
+Zhehao Wang
+404380075
+zhehao@cs.ucla.edu
+
+*** Contents ***
+
+* client.c - the client source
+* server.c - the server source
+* Makefile
+* my.key   - the key file read in for mcrypt key generation
+* README   - this file
 
 *** Notes ***
 
-* This program is based on that of project1a + tutorial example of TCP client and server program
+* This program is based on that of project1a (we still use the one-character buffer) + tutorial example of TCP client and server program
 * A mutex lock is placed around the exit call, which we identified as a critical section, since multiple threads may be calling exit at the same time, in which case atexit's registered function may not get called
-* The server is adapted for potentially having multiple clients, which is not mentioned by the spec. One process, one socket, two pipes, and two threads are created for each client, the process runs bash, the socket connects to the client, two pipes handles the input and output from the forked bash, and two threads handles the input from forked bash, and the input from client socket. The server's main thread blocks on accept() call for potential new clients. This multiple client case is not tested with the "--encrypt" flag on. The server would exit upon one client, or one forked shell exits.
+* The server is adapted for potentially having multiple clients, which is not mentioned by the spec. One process, one socket, two pipes, and two threads are created by the server for each client. The process runs bash, the socket connects to the client, two pipes handles the input and output from the forked bash, and two threads handles the input from forked bash, and the input from client socket. The server's main thread blocks on accept() call for potential new clients. This multiple client case is not tested with the "--encrypt" flag on. The server would exit upon one client, or one forked shell exits.
 * To have the same IV on the client and server for encryption and decryption, this program relies on the pseudorandom number generated from rand() call to result in the same numbers on both the client and the server.
 * The client only connects to localhost (127.0.0.1) and is hardcoded to do so.
 

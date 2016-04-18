@@ -65,10 +65,11 @@ void *read_input_from_server(void *param)
 
       int write_size = write(1, buffer, read_size);
       if (write_size <= 0) {
+        // Socket write error
         my_exit_call(1);
       }
     } else {
-      // READ error or EOF
+      // Socket read error or EOF
       my_exit_call(1);
     }
   }
