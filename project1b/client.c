@@ -47,7 +47,7 @@ void exit_function ()
 void *read_input_from_server(void *param)
 {
   int *sock_fd = (int *)param;
-  char buffer[RECEIVE_BUFFER_SIZE] = {};
+  char buffer[RECEIVE_BUFFER_SIZE + 1] = {};
   char log_msg[LOG_MSG_BUFFER_SIZE] = {};
 
   while (1) {
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
   // mcrypt setup
   int i;
   char *key;
-  char password[20];
+  char password[20] = {};
   char *IV;
   int keysize = 16; /* 128 bits */
 
@@ -176,11 +176,14 @@ int main(int argc, char **argv)
     }
   }
 
-  char buffer[INPUT_BUFFER_SIZE] = {};
+  char buffer[INPUT_BUFFER_SIZE + 1] = {};
   char log_msg[LOG_MSG_BUFFER_SIZE] = {};
 
   while (1) {
+    // tested with single-size buffer
     int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
+    // so that buffer terminates correctly when doing string ops such as sprintf %s
+    buffer[read_size] = 0;
 
     // the Ctrl+D character; this is fine as we've a single-size buffer
     if (buffer[0] == 4) {
