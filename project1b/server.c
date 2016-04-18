@@ -14,12 +14,15 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#include <mcrypt.h>
+
 #define INPUT_BUFFER_SIZE 512
 #define MAX_BACK_LOG      3
 
 pthread_mutex_t exit_mutex;
 
 static int encrypt_flag;
+MCRYPT td;
 
 struct children_struct {
   int stdout_pipe[2];
@@ -52,6 +55,11 @@ void *write_output_to_child(void *param)
   char buffer[INPUT_BUFFER_SIZE] = {};
   while (1) {
     int read_size = read(child->child_fd, buffer, INPUT_BUFFER_SIZE);
+
+    if (encrypt_flag) {
+      mdecrypt_generic(td, buffer, read_size);
+    }
+
     if (read_size > 0) {
       int write_size = write(child->stdout_pipe[1], buffer, read_size);
       if (write_size <= 0) {
@@ -69,18 +77,22 @@ void *write_output_to_child(void *param)
 
 static void sigpipe_handler(int signo)
 {
-  // receive sigpipe, exit with status 2
+  // receive sigpipe (from shell), exit with status 2
   my_exit_call(2);
 }
 
 void *read_input_from_child(void *param)
 {
-  struct children_struct *child = (struct children_struct *)param;
+  struct children_struct *child = (struct children_struct *)param; 
   
   char buffer[INPUT_BUFFER_SIZE] = {};
   while (1) {
     int read_size = read(child->stdin_pipe[0], buffer, INPUT_BUFFER_SIZE);
+    
     if (read_size > 0) {
+      if (encrypt_flag) {
+        mcrypt_generic(td, buffer, read_size);
+      }
       int write_size = write(child->child_fd, buffer, read_size);
       if (write_size <= 0) {
         // network write error, return 2
@@ -143,6 +155,35 @@ int main(int argc, char **argv)
 
   signal(SIGPIPE, sigpipe_handler);
   
+  // mcrypt setup
+  int i;
+  char *key;
+  char password[20];
+  char *IV;
+  int keysize = 16; /* 128 bits */
+
+  if (encrypt_flag) {
+    key = calloc(1, keysize);
+    strcpy(password, "A_large_key");
+    memmove(key, password, strlen(password));
+    td = mcrypt_module_open("twofish", NULL, "cfb", NULL);
+    if (td==MCRYPT_FAILED) {
+       return 1;
+    }
+    IV = malloc(mcrypt_enc_get_iv_size(td));
+
+    // we make sure to use the same pseudo-random number for IV on both the client and the server.
+    //srand(time(0));
+    for (i = 0; i < mcrypt_enc_get_iv_size(td); i++) {
+      IV[i]=rand();
+    }
+    i = mcrypt_generic_init(td, key, keysize, IV);
+    if (i < 0) {
+       mcrypt_perror(i);
+       exit(3);
+    }
+  }
+
   while (1) {
     int client_fd = accept(sock_fd, (struct sockaddr *) &cli_addr, &clilen);
     if (client_fd < 0) {

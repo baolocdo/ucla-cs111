@@ -16,6 +16,8 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
+#include <mcrypt.h>
+
 #define INPUT_BUFFER_SIZE 1
 #define RECEIVE_BUFFER_SIZE 512
 #define LOG_MSG_BUFFER_SIZE 1024
@@ -25,6 +27,7 @@ pthread_mutex_t exit_mutex;
 int log_fd = -1;
 
 static int encrypt_flag;
+MCRYPT td;
 
 // The exit call is wrapped in critical section, as it may be called from multiple threads;
 // We don't want to have the potential of calling two exits at the same time, which will mess up with the atexit's registered function.
@@ -56,6 +59,10 @@ void *read_input_from_server(void *param)
         write(log_fd, log_msg, log_msg_size);
       }
       
+      if (encrypt_flag) {
+        mdecrypt_generic(td, buffer, read_size);
+      }
+
       int write_size = write(1, buffer, read_size);
       if (write_size <= 0) {
         my_exit_call(1);
@@ -132,19 +139,51 @@ int main(int argc, char **argv)
   pthread_t server_input_thread;
   pthread_mutex_init(&exit_mutex, NULL);
   pthread_create(&server_input_thread, NULL, read_input_from_server, &sock_fd);
+  
+  // mcrypt setup
+  int i;
+  char *key;
+  char password[20];
+  char *IV;
+  int keysize = 16; /* 128 bits */
+
+  if (encrypt_flag) {
+    key = calloc(1, keysize);
+    strcpy(password, "A_large_key");
+    memmove(key, password, strlen(password));
+    td = mcrypt_module_open("twofish", NULL, "cfb", NULL);
+    if (td==MCRYPT_FAILED) {
+       return 1;
+    }
+    IV = malloc(mcrypt_enc_get_iv_size(td));
+
+    // we make sure to use the same pseudo-random number for IV on both the client and the server.
+    //srand(time(0));
+    for (i = 0; i < mcrypt_enc_get_iv_size(td); i++) {
+      IV[i]=rand();
+    }
+    i = mcrypt_generic_init(td, key, keysize, IV);
+    if (i < 0) {
+       mcrypt_perror(i);
+       exit(3);
+    }
+  }
 
   char buffer[INPUT_BUFFER_SIZE] = {};
   char log_msg[LOG_MSG_BUFFER_SIZE] = {};
 
   while (1) {
     int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
-    int i = 0;
-    for (i = 0; i < read_size; i++) {
-      if (buffer[i] == 4) {
-        my_exit_call(0);
-      }
+
+    // the Ctrl+D character; this is fine as we've a single-size buffer
+    if (buffer[0] == 4) {
+      my_exit_call(0);
     }
-    buffer[read_size] = 0;
+
+    if (encrypt_flag) {
+      mcrypt_generic(td, buffer, 1);
+    }
+    
     int sent_size = write(sock_fd, buffer, read_size);
     if (sent_size > 0) {
       if (log_fd > 0) {
@@ -153,6 +192,6 @@ int main(int argc, char **argv)
       }
     }
   }
-  
+
   return 0;
 }
