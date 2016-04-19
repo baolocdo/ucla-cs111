@@ -177,7 +177,8 @@ int main(int argc, char **argv)
     }
   }
 
-  char buffer[INPUT_BUFFER_SIZE + 1] = {};
+  // make the size of buffer 3, so that we can accomodate character + 0, or mapped 0D 0A 0
+  char buffer[INPUT_BUFFER_SIZE + 2] = {};
   char log_msg[LOG_MSG_BUFFER_SIZE] = {};
 
   while (1) {
@@ -186,16 +187,21 @@ int main(int argc, char **argv)
     // so that buffer terminates correctly when doing string ops such as sprintf %s
     buffer[read_size] = 0;
 
-    // the Ctrl+D character; this is fine as we've a single-size buffer
     if (buffer[0] == 4) {
+      // the Ctrl+D character; this is fine as we've a single-size buffer
       my_exit_call(0);
+    } else if (buffer[0] == 0x0D || buffer[0] == 0x0A) {
+      // we keep the cr lf mapping from lab1a: client side echos the received character, but sends mapped character to socket and log
+      buffer[0] = 0x0D;
+      buffer[1] = 0x0A;
+      buffer[2] = 0;
     }
 
     if (encrypt_flag) {
-      mcrypt_generic(td, buffer, 1);
+      mcrypt_generic(td, buffer, strlen(buffer));
     }
     
-    int sent_size = write(sock_fd, buffer, read_size);
+    int sent_size = write(sock_fd, buffer, strlen(buffer));
     if (sent_size > 0) {
       if (log_fd > 0) {
         int log_msg_size = sprintf(log_msg, "SENT %d BYTES: %s\n", sent_size, buffer);
