@@ -18,7 +18,7 @@ zhehao@cs.ucla.edu
 * A mutex lock is placed around the exit call, which we identified as a critical section, since multiple threads may be calling exit at the same time, in which case atexit's registered function may not get called
 * To have the same IV on the client and server for encryption and decryption, this program relies on the pseudorandom number generated from rand() call to result in the same numbers on both the client and the server.
 * The client only connects to localhost (127.0.0.1) and is hardcoded to do so. A default port number is given if --port is not provided.
-* Why doesn't the spec say anything about keeping noecho mode for client, and keep the <cr><lf> mapping as 1a? (Piazza #180 and #143)
+* The spec say anything about keeping noecho mode for client, and keeping the <cr><lf> mapping as 1a, but these seems in fact wanted. (As answered on Piazza #180 and #143, #155, #198)
 
 *** Testing methodology ***
 

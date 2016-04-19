@@ -191,7 +191,7 @@ int main(int argc, char **argv)
       // the Ctrl+D character; this is fine as we've a single-size buffer
       my_exit_call(0);
     } else if (buffer[0] == 0x0D || buffer[0] == 0x0A) {
-      // Per 1A spec, <cr> / <lf> goes to shell (in this terminal) as <lf>, and echo as <cr><lf>
+      // Per 1A spec, <cr> / <lf> goes to shell (in this case, server) as <lf>, and echo as <cr><lf>
       buffer[0] = 0x0A;
       buffer[1] = 0;
       write(1, line_feed, 2);
