@@ -251,6 +251,9 @@ int main(int argc, char **argv)
 
         pthread_create(&children[current_child_num].child_input_thread, NULL, read_input_from_child, &children[current_child_num]);
         pthread_create(&children[current_child_num].child_output_thread, NULL, write_output_to_child, &children[current_child_num]);
+
+        // we are done dup'ing the fd, and can close it now
+        close(children[current_child_num].child_fd);
       }
     } else {
       perror("Fork failed!");
