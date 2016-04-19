@@ -54,7 +54,8 @@ void *write_output_to_child(void *param)
   
   char buffer[INPUT_BUFFER_SIZE] = {};
   while (1) {
-    int read_size = read(child->child_fd, buffer, INPUT_BUFFER_SIZE);
+    // redirected server's stdin 
+    int read_size = read(0, buffer, INPUT_BUFFER_SIZE);
 
     if (encrypt_flag) {
       mdecrypt_generic(td, buffer, read_size);
@@ -93,7 +94,8 @@ void *read_input_from_child(void *param)
       if (encrypt_flag) {
         mcrypt_generic(td, buffer, read_size);
       }
-      int write_size = write(child->child_fd, buffer, read_size);
+      // redirected server's stdout
+      int write_size = write(1, buffer, read_size);
       if (write_size <= 0) {
         // network write error, return 2
         my_exit_call(1);
@@ -234,10 +236,18 @@ int main(int argc, char **argv)
         }
       } else {
         // Parent
+        if (current_child_num > 0) {
+          // Too many children! we are not supposed to support this given that server's stdio are mapped
+          continue;
+        }
         children[current_child_num].child_pid = child_pid;
 
         close(children[current_child_num].stdout_pipe[0]);
         close(children[current_child_num].stdin_pipe[1]);
+
+        dup2(children[current_child_num].child_fd, 1);
+        dup2(children[current_child_num].child_fd, 2);
+        dup2(children[current_child_num].child_fd, 0);
 
         pthread_create(&children[current_child_num].child_input_thread, NULL, read_input_from_child, &children[current_child_num]);
         pthread_create(&children[current_child_num].child_output_thread, NULL, write_output_to_child, &children[current_child_num]);

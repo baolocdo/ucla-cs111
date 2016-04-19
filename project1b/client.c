@@ -25,6 +25,7 @@
 struct termios oldattr, newattr;
 pthread_mutex_t exit_mutex;
 int log_fd = -1;
+char line_feed[2] = {0x0D, 0x0A};
 
 static int encrypt_flag;
 MCRYPT td;
@@ -114,7 +115,7 @@ int main(int argc, char **argv)
 
   newattr = oldattr;
   atexit(exit_function);
-  newattr.c_lflag &= ~(ICANON);
+  newattr.c_lflag &= ~(ICANON | ECHO);
 
   if (tcsetattr(STDIN_FILENO, TCSANOW, &newattr) == -1) {
     perror("Cannot set attr of terminal!");
@@ -177,8 +178,7 @@ int main(int argc, char **argv)
     }
   }
 
-  // make the size of buffer 3, so that we can accomodate character + 0, or mapped 0D 0A 0
-  char buffer[INPUT_BUFFER_SIZE + 2] = {};
+  char buffer[INPUT_BUFFER_SIZE + 1] = {};
   char log_msg[LOG_MSG_BUFFER_SIZE] = {};
 
   while (1) {
@@ -191,10 +191,12 @@ int main(int argc, char **argv)
       // the Ctrl+D character; this is fine as we've a single-size buffer
       my_exit_call(0);
     } else if (buffer[0] == 0x0D || buffer[0] == 0x0A) {
-      // we keep the cr lf mapping from lab1a: client side echos the received character, but sends mapped character to socket and log
-      buffer[0] = 0x0D;
-      buffer[1] = 0x0A;
-      buffer[2] = 0;
+      // Per 1A spec, <cr> / <lf> goes to shell (in this terminal) as <lf>, and echo as <cr><lf>
+      buffer[0] = 0x0A;
+      buffer[1] = 0;
+      write(1, line_feed, 2);
+    } else {
+      write(1, buffer, strlen(buffer));
     }
 
     if (encrypt_flag) {
