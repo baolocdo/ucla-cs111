@@ -1,0 +1,25 @@
+Project 1B
+==================
+Zhehao Wang
+404380075
+zhehao@cs.ucla.edu
+
+*** Contents ***
+
+* client.c - the client source
+* server.c - the server source
+* Makefile
+* my.key   - the key file read in for mcrypt key generation
+* README   - this file
+
+*** Notes ***
+
+* This program is based on that of project1a (we still use the one-character buffer) + tutorial example of TCP client and server program
+* A mutex lock is placed around the exit call, which we identified as a critical section, since multiple threads may be calling exit at the same time, in which case atexit's registered function may not get called
+* To have the same IV on the client and server for encryption and decryption, this program relies on the pseudorandom number generated from rand() call to result in the same numbers on both the client and the server.
+* The client only connects to localhost (127.0.0.1) and is hardcoded to do so. A default port number is given if --port is not provided.
+* The spec say anything about keeping noecho mode for client, and keeping the <cr><lf> mapping as 1a, but these seems in fact wanted. (As answered on Piazza #180 and #143, #155, #198)
+
+*** Testing methodology ***
+
+The Makefile did not include test cases. Tests are done by passing in different combination of arguments, and checking logs and outputs manually.
