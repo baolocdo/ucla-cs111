@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+#define _GNU_SOURCE
 #include <pthread.h>
 
 int num_threads;

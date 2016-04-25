@@ -1,5 +1,5 @@
 main: lab2a.c
-	gcc -o lab2a -g lab2a.c -lpthread -Wall
+	gcc -o lab2a -g lab2a.c -pthread -Wall
 clean:
 	rm -rf lab2a
 	rm -rf *.o
