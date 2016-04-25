@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -5,15 +7,16 @@
 #include <string.h>
 #include <time.h>
 
-#define _GNU_SOURCE
 #include <pthread.h>
 
-int num_threads;
-int num_iterations;
+#define DEBUG_MSG_BUFFER_SIZE 512
+
+int num_threads = 1;
+int num_iterations = 1;
 char opt_sync;
 int opt_yield;
 
-long long counter;
+long long counter = 0;
 pthread_mutex_t add_mutex;
 int add_spin = 0;
 pthread_t *threads;
@@ -132,14 +135,14 @@ int main(int argc, char **argv)
   for (i = 0; i < num_threads; i++) {
     ret = pthread_create(&(threads[i]), NULL, thread_func, NULL);
     if (ret < 0) {
-
+      exit(1);
     }
   }
 
   for (i = 0; i < num_threads; i++) {
     ret = pthread_join(threads[i], NULL);
     if (ret < 0) {
-
+      exit(1);
     }
   }
 
@@ -150,7 +153,21 @@ int main(int argc, char **argv)
   elasped_time_ns += end_time.tv_nsec;
   elasped_time_ns -= start_time.tv_nsec;
   
-  printf("Took %lld nanoseconds\n", elasped_time_ns);
+  char debug_msg[DEBUG_MSG_BUFFER_SIZE] = {};
+  long long num_operations = num_threads * num_iterations * 2;
+  int size = sprintf(debug_msg, "%d threads x %d iterations x (add + subtract) = %lld operations\n", num_threads, num_iterations, num_operations);
+  write(1, debug_msg, size);
+  
+  if (counter != 0) {
+    size = sprintf(debug_msg, "ERROR: final count = %lld\n", counter);
+    write(2, debug_msg, size);
+  }
+
+  size = sprintf(debug_msg, "elasped time: %lld\n", elasped_time_ns);
+  write(1, debug_msg, size);
+
+  size = sprintf(debug_msg, "per operation: %lld\n", elasped_time_ns / num_operations);
+  write(1, debug_msg, size);
 
   free(threads);
   return 0;
