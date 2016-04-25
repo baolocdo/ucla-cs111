@@ -119,8 +119,6 @@ int main(int argc, char **argv)
     }
   }
 
-  printf("sync method: %c\n", opt_sync);
-
   int i = 0;
   int ret = 0;
   threads = (pthread_t *)malloc(sizeof(pthread_t) * num_threads);
@@ -135,14 +133,14 @@ int main(int argc, char **argv)
   for (i = 0; i < num_threads; i++) {
     ret = pthread_create(&(threads[i]), NULL, thread_func, NULL);
     if (ret < 0) {
-      exit(1);
+      exit(2);
     }
   }
 
   for (i = 0; i < num_threads; i++) {
     ret = pthread_join(threads[i], NULL);
     if (ret < 0) {
-      exit(1);
+      exit(2);
     }
   }
 
@@ -161,14 +159,17 @@ int main(int argc, char **argv)
   if (counter != 0) {
     size = sprintf(debug_msg, "ERROR: final count = %lld\n", counter);
     write(2, debug_msg, size);
+    ret = 1;
+  } else {
+    ret = 0;
   }
 
-  size = sprintf(debug_msg, "elasped time: %lld\n", elasped_time_ns);
+  size = sprintf(debug_msg, "elasped time: %lldns\n", elasped_time_ns);
   write(1, debug_msg, size);
 
-  size = sprintf(debug_msg, "per operation: %lld\n", elasped_time_ns / num_operations);
+  size = sprintf(debug_msg, "per operation: %lldns\n", elasped_time_ns / num_operations);
   write(1, debug_msg, size);
 
   free(threads);
-  return 0;
+  return ret;
 }
