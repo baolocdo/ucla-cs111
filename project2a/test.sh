@@ -45,7 +45,7 @@ for it in "${threads[@]}"; do
 		echo "./lab2a --iterations=$icount --threads=$it --sync=$isync" >> stdout_sync.txt
 		echo "./lab2a --iterations=$icount --threads=$it --sync=$isync" >> stderr_sync.txt
 		for i in `seq 1 10`; do
-			./lab2a --iterations=$icount --threads=$it --sync=$isync 2>>stderr_yield.txt 1>>stdout_yield.txt
+			./lab2a --iterations=$icount --threads=$it --sync=$isync 2>>stderr_sync.txt 1>>stdout_sync.txt
 		done
 	done
 done
