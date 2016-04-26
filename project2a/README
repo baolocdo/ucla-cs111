@@ -14,6 +14,7 @@ zhehao@cs.ucla.edu
 * graph1-avg-time-vs-num-op-ori.png                - graph 1 on ordinary scale x and y axis; hard to show later data points, so graph 1 with log scale is added
 * graph1-avg-time-vs-num-op-log.png                - graph 1 on log scale
 * graph2-avg-time-vs-threads-for-4-mechanisms.png  - graph 2
+* test.sh  - the test script (not required)
 
 *** Answers ***
 
