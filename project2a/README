@@ -1,4 +1,4 @@
-Project 1B
+Project 2A
 ==================
 Zhehao Wang
 404380075
@@ -6,20 +6,63 @@ zhehao@cs.ucla.edu
 
 *** Contents ***
 
-* client.c - the client source
-* server.c - the server source
+(Please note that 2 graph 1s are included, one on ordinary scale, the other with x and y axises both on log10 scale)
+
+* lab2a.c  - the source file
 * Makefile
-* my.key   - the key file read in for mcrypt key generation
 * README   - this file
+* graph1-avg-time-vs-num-op-ori.png                - graph 1 on ordinary scale x and y axis; hard to show later data points, so graph 1 with log scale is added
+* graph1-avg-time-vs-num-op-log.png                - graph 1 on log scale
+* graph2-avg-time-vs-threads-for-4-mechanisms.png  - graph 2
 
-*** Notes ***
+*** Answers ***
 
-* This program is based on that of project1a (we still use the one-character buffer) + tutorial example of TCP client and server program
-* A mutex lock is placed around the exit call, which we identified as a critical section, since multiple threads may be calling exit at the same time, in which case atexit's registered function may not get called
-* To have the same IV on the client and server for encryption and decryption, this program relies on the pseudorandom number generated from rand() call to result in the same numbers on both the client and the server.
-* The client only connects to localhost (127.0.0.1) and is hardcoded to do so. A default port number is given if --port is not provided.
-* The spec say anything about keeping noecho mode for client, and keeping the <cr><lf> mapping as 1a, but these seems in fact wanted. (As answered on Piazza #180 and #143, #155, #198)
+2A.1. How many iterations and threads it takes to fail fairly consistently (without yield)
+
+With 2 threads, failure happens consistently at around 5000 iterations; at 4 threads, failure happens consistently at around 1500 iterations; at 8 threads or more, failure happens at around 500 iterations.
+
+2A.1A. Why does it take this many threads or iterations to result in failure?
+
+Possibility of conflicts increases with the number of threads and number of iterations. The more threads and iterations, the more likely it is to fail.
+
+2A.1B. Why does a significantly smaller number of iterations so seldom fail?
+
+With lower number of threads and iterations, there's a larger chance that conflicts do not happen, and we result in a success if conflicts happen to not occur.
+
+2A.2. How many iterations and threads it takes to fail fairly consistently (with yield)
+
+With 2 or more threads, failure happens consistently at around 200 iterations and less.
+
+2A.2A. Why does the average cost per operation drop with increasing iterations?
+
+Thread creation has a mostly fixed overhead which is much larger than the cost of each operation. Our calculated cost per operation = (thread creation overhead + run time) / #op = thread creation overhead / #op + actual cost per op; which drops and gets closer to cost per op as the number of operation increases.
+
+2A.2B. How do we know what the "correct" cost is?
+
+We have a close approximation of the "correct" cost when number of op is large enough. Per the formula in 2A.2A, our calculated cost per operation = thread creation overhead / #op + actual cost per op. And lim_{#op -> infinity}calculated cost per operation = actual cost per op.
+
+2A.2C. Why are the --yield runs so much slower?  Where is the extra time going?
+
+Yield forces the calling thread to relinquish the CPU, thus could trigger context switches, which requires saving the state of this thread and loading that of another, meanwhile could invalidate instructions loaded in CPU pipeline, and all of these takes much more time than a sequential, uninterrupted execution. We force a yield in every operation, which causes the execution time to increase greatly.
+
+2A.2D. Can we get valid timings if we are using --yield?  How, or why not?
+
+We could if we know approximately how long a context switch takes given our program. This could roughly be measured by repeatedly running our program with only "yield" but not add or assignment in our add function (with large number of iterations, of course).
+
+2A.3A. Why do all of the options perform similarly for low numbers of threads?
+
+The differences in locking mechanism performance is more exposed when conflicts are many (locking mechanism needs to be invoked often, thus showing their differences in performance). At lower number of threads, there's a smaller chance of conflict, so different options perform similarly for lower numbers of threads.
+
+2A.3B. Why do the three protected operations slow down as the number of threads rises?
+
+At higher number of threads, chance of conflict gets larger. Corresponding locking mechanism needs to be invoked more often, which introduces higher locking overhead and slows down the protected operations.
+
+2A.3C. Why are spin-locks so expensive for large numbers of threads?
+
+Spin-locks keeps the CPU busy when spinning until the lock is released by another thread. This busy-wait status makes it expensive, which becomes more obvious for larger numbers of threads.
 
 *** Testing methodology ***
 
-The Makefile did not include test cases. Tests are done by passing in different combination of arguments, and checking logs and outputs manually.
+For the statistics collection, a shell script is created which runs the program repeatedly with different parameters.
+
+All statistics were collected on seasnet lnxsrv07.
