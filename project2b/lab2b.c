@@ -168,7 +168,7 @@ int main(int argc, char **argv)
   
   // Start timer
   struct timespec start_time;
-  //clock_gettime(CLOCK_MONOTONIC, &start_time);
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 
   if (opt_sync == 'm') {
     pthread_mutex_init(&list_mutex, NULL);
@@ -189,11 +189,11 @@ int main(int argc, char **argv)
   }
 
   struct timespec end_time;
-  //clock_gettime(CLOCK_MONOTONIC, &end_time);
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
   
   char debug_msg[DEBUG_MSG_BUFFER_SIZE] = {};
   int size = 0;
-  /*
+  
   long long elasped_time_ns = (end_time.tv_sec - start_time.tv_sec) * 1000000000;
   elasped_time_ns += end_time.tv_nsec;
   elasped_time_ns -= start_time.tv_nsec;
@@ -207,7 +207,6 @@ int main(int argc, char **argv)
 
   size = sprintf(debug_msg, "per operation: %lldns\n", elasped_time_ns / num_operations);
   write(1, debug_msg, size);
-  */
   
   int list_length = SortedList_length(&list_head);
   if (list_length != 0) {
