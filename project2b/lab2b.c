@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -49,21 +47,20 @@ void* thread_func(void *param) {
     }
   }
 
-  // get length
-  int list_length = 0;
+  // get length: we are not using the length for anything here
   switch (opt_sync) {
     case 'm':
       pthread_mutex_lock(&list_mutex);
-      list_length = SortedList_length(&list_head);
+      SortedList_length(&list_head);
       pthread_mutex_unlock(&list_mutex);
       break;
     case 's':
       while (__sync_lock_test_and_set(&list_spin, 1));
-      list_length = SortedList_length(&list_head);
+      SortedList_length(&list_head);
       __sync_lock_release(&list_spin);
       break;
     default:
-      list_length = SortedList_length(&list_head);
+      SortedList_length(&list_head);
       break;
   }
 
@@ -199,7 +196,7 @@ int main(int argc, char **argv)
   elasped_time_ns -= start_time.tv_nsec;
   
   long long num_operations = num_elements * 2;
-  int size = sprintf(debug_msg, "%d threads x %d iterations x (insert + lookup/delete) = %lld operations\n", num_threads, num_iterations, num_operations);
+  size = sprintf(debug_msg, "%d threads x %d iterations x (insert + lookup/delete) = %lld operations\n", num_threads, num_iterations, num_operations);
   write(1, debug_msg, size);
 
   size = sprintf(debug_msg, "elasped time: %lldns\n", elasped_time_ns);
