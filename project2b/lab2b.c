@@ -86,6 +86,7 @@ void* thread_func(void *param) {
         break;
       default:
         element = SortedList_lookup(&list_head, list_elements[*offset + i].key);
+        // we don't want to "force" a segfault here if the lookup results in NULL
         if (element != NULL) {
           SortedList_delete(element);
         }
