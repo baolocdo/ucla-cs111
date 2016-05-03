@@ -25,7 +25,7 @@ As the number of iterations goes up, the number of elements to be inserted, look
 
 2B.1B. How would you propose to correct for this effect?
 
-One correction would be to graph (average cost per operation / number of elements each thread handles, essentially number of iterations) vs the number of operations (so the y-axis values will be divided by corresponding x-axis values).
+One correction would be to graph (average cost per operation / number of elements) vs the number of operations.
 
 2B.2A. Compare the variation in time per protected operation vs the number of threads in Project 2B and in Project 2A.  Explain the difference.
 

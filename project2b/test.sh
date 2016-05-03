@@ -40,6 +40,8 @@ done
 
 # Part three
 icount=1000
+threads=(1 2 4 6 8 10 12 16 20 24 32)
+
 for it in "${threads[@]}"; do
 	for isync in "${sync[@]}"; do
 		echo "./lab2b --iterations=$icount --threads=$it --sync=$isync"
