@@ -46,3 +46,7 @@ Without synchronization and under different yield options, it take (approximatel
 For the statistics collection, a shell script is created which runs the program repeatedly with different parameters.
 
 All statistics were collected on seasnet lnxsrv07.
+
+*** Note ***
+
+The correction in 2nd graph is arguable. As the pseudo-randomized result has a (non-negligible) impact on the average time, the trend may not mean much; the general comparison between the two mechanisms could be slightly more meaningful.
