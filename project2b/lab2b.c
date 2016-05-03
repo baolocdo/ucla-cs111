@@ -24,22 +24,6 @@ pthread_t *threads;
 SortedListElement_t list_head;
 SortedListElement_t *list_elements;
 
-void debug_list() {
-  SortedListElement_t* list = &list_head;
-  SortedListElement_t* next = list_head.next;
-  int count = 0;
-  while (list != next) {
-    if (next->prev->next != next || next->next->prev != next) {
-      printf("Corrupted list!\n");
-    }
-    printf("%d: %s\n", count, next->key);
-    next = next->next;
-    count += 1;
-  }
-  printf("done.\n");
-  return;
-}
-
 void* thread_func(void *param) {
   int *offset = (int *)param;
   int i = 0;
@@ -63,8 +47,6 @@ void* thread_func(void *param) {
     }
   }
   
-  debug_list();
-
   // get length: we are not using the length for anything here
   switch (opt_sync) {
     case 'm':
@@ -81,8 +63,6 @@ void* thread_func(void *param) {
       SortedList_length(&list_head);
       break;
   }
-
-  printf("count: %d\n", SortedList_length(&list_head));
 
   // look up and delete
   for (i = 0; i < num_iterations; i++) {
@@ -113,8 +93,6 @@ void* thread_func(void *param) {
         break;
     }
   }
-
-  debug_list();
 
   return NULL;
 }
@@ -178,7 +156,6 @@ int main(int argc, char **argv)
       // key ranges from a...z
       key_str[j] = rand() % 26 + 65;
     }
-    printf("generated: %s\n", key_str);
     list_elements[i].key = key_str;
   }
   
