@@ -24,6 +24,22 @@ pthread_t *threads;
 SortedListElement_t list_head;
 SortedListElement_t *list_elements;
 
+void debug_list() {
+  SortedListElement_t* list = &list_head;
+  SortedListElement_t* next = list_head.next;
+  int count = 0;
+  while (list != next) {
+    if (next->prev->next != next || next->next->prev != next) {
+      printf("Corrupted list!\n");
+    }
+    printf("%d: %s\n", count, next->key);
+    next = next->next;
+    count += 1;
+  }
+  printf("done.\n");
+  return;
+}
+
 void* thread_func(void *param) {
   int *offset = (int *)param;
   int i = 0;
@@ -46,6 +62,8 @@ void* thread_func(void *param) {
         break;
     }
   }
+  
+  debug_list();
 
   // get length: we are not using the length for anything here
   switch (opt_sync) {
@@ -93,6 +111,9 @@ void* thread_func(void *param) {
         break;
     }
   }
+
+  debug_list();
+
   return NULL;
 }
 
