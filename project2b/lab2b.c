@@ -86,10 +86,10 @@ void* thread_func(void *param) {
         break;
       default:
         element = SortedList_lookup(&list_head, list_elements[*offset + i].key);
-        // we don't want to "force" a segfault here if the lookup results in NULL
-        if (element != NULL) {
-          SortedList_delete(element);
-        }
+        // by removing the condition, we may "force" a segfault here if the lookup results in NULL
+        //if (element != NULL) {
+        SortedList_delete(element);
+        //}
         break;
     }
   }
@@ -204,7 +204,8 @@ int main(int argc, char **argv)
   size = sprintf(debug_msg, "elasped time: %lldns\n", elasped_time_ns);
   write(1, debug_msg, size);
 
-  size = sprintf(debug_msg, "per operation: %lldns\n", elasped_time_ns / num_operations);
+  // Here we apply the "correction"
+  size = sprintf(debug_msg, "per operation: %lldns\n", elasped_time_ns / num_operations / num_elements);
   write(1, debug_msg, size);
   
   int list_length = SortedList_length(&list_head);
