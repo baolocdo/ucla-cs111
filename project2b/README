@@ -25,7 +25,7 @@ As the number of iterations goes up, the number of elements to be inserted, look
 
 2B.1B. How would you propose to correct for this effect?
 
-One correction would be to graph (average cost per operation / number of elements) vs the number of operations (so the y-axis values will be divided by corresponding x-axis values).
+One correction would be to graph (average cost per operation / number of elements each thread handles, essentially number of iterations) vs the number of operations (so the y-axis values will be divided by corresponding x-axis values).
 
 2B.2A. Compare the variation in time per protected operation vs the number of threads in Project 2B and in Project 2A.  Explain the difference.
 
@@ -36,10 +36,10 @@ In 2b, the probability of conflict is much higher for the same number of threads
 
 Without synchronization and under different yield options, it take (approximately) the following amount of threads and iterations to fail consistently:
 
---yield=i  : 6 threads, 800 operations
---yield=d  : 4 threads, 200 operations
---yield=is : 6 threads, 800 operations
---yield=ds : 4 threads, 200 operations
+--yield=i  : 2 threads, 400 operations
+--yield=d  : 2 threads, 600 operations
+--yield=is : 2 threads, 200 operations
+--yield=ds : 2 threads, 400 operations
 
 *** Testing methodology ***
 

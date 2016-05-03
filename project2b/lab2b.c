@@ -205,7 +205,7 @@ int main(int argc, char **argv)
   write(1, debug_msg, size);
 
   // Here we apply the "correction"
-  size = sprintf(debug_msg, "per operation: %lldns\n", elasped_time_ns / num_operations / num_elements);
+  size = sprintf(debug_msg, "per operation: %lldns\n", elasped_time_ns / num_operations / num_iterations);
   write(1, debug_msg, size);
   
   int list_length = SortedList_length(&list_head);
