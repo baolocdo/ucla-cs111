@@ -6,4 +6,4 @@ clean:
 	rm -rf *.out
 dist:
 	rm -rf lab2b-404380075.tar.gz
-	tar -zcf lab2b-404380075.tar.gz *.c Makefile README *.png test.sh
+	tar -zcf lab2b-404380075.tar.gz *.c *.h Makefile README *.png test.sh

@@ -50,3 +50,5 @@ All statistics were collected on seasnet lnxsrv07.
 *** Note ***
 
 The correction in 2nd graph is arguable. As the pseudo-randomized result has a (non-negligible) impact on the average time, the trend may not mean much; the general comparison between the two mechanisms could be slightly more meaningful.
+
+Also, since 2B.1A and 2B.2A use different metrics (corrections introduced to 2B.2A), need to remove the "/num_elements" in avg calculation to reproduce the result in 1A.
