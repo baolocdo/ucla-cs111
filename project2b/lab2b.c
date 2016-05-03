@@ -82,6 +82,8 @@ void* thread_func(void *param) {
       break;
   }
 
+  printf("count: %d\n", SortedList_length(&list_head));
+
   // look up and delete
   for (i = 0; i < num_iterations; i++) {
     SortedListElement_t *element;
@@ -176,6 +178,7 @@ int main(int argc, char **argv)
       // key ranges from a...z
       key_str[j] = rand() % 26 + 65;
     }
+    printf("generated: %s\n", key_str);
     list_elements[i].key = key_str;
   }
   
