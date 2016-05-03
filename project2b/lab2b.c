@@ -71,17 +71,13 @@ void* thread_func(void *param) {
       case 'm':
         pthread_mutex_lock(&list_mutex);
         element = SortedList_lookup(&list_head, list_elements[*offset + i].key);
-        if (element != NULL) {
-          SortedList_delete(element);
-        }
+        SortedList_delete(element);
         pthread_mutex_unlock(&list_mutex);
         break;
       case 's':
         while (__sync_lock_test_and_set(&list_spin, 1));
         element = SortedList_lookup(&list_head, list_elements[*offset + i].key);
-        if (element != NULL) {
-          SortedList_delete(element);
-        }
+        SortedList_delete(element);
         __sync_lock_release(&list_spin);
         break;
       default:
