@@ -27,9 +27,9 @@ pthread_t *threads;
 SortedListElement_t *list_head;
 SortedListElement_t *list_elements;
 
-int hash_key(char *key, int len) {
+int hash_key(const char *key, int len) {
   int i = 0;
-  int product = 1;
+  int product = 0;
   for (i = 0; i < len; i++) {
     product += key[i];
   }
@@ -243,13 +243,16 @@ int main(int argc, char **argv)
   size = sprintf(debug_msg, "per operation: %fns\n", (float)(elasped_time_ns / num_operations / (float)num_elements));
   write(1, debug_msg, size);
   
-  int list_length = SortedList_length(&list_head);
-  if (list_length != 0) {
-    size = sprintf(debug_msg, "ERROR: final count = %d\n", list_length);
-    write(2, debug_msg, size);
-    ret = 1;
-  } else {
-    ret = 0;
+  // All sub lists are expected to be empty after we are done
+  int list_length = 0;
+  for (i = 0; i < num_lists; i++) {
+    list_length = SortedList_length(&list_head[i]);
+    if (list_length != 0) {
+      size = sprintf(debug_msg, "ERROR: final count = %d\n", list_length);
+      write(2, debug_msg, size);
+      ret = 1;
+      break;
+    }
   }
 
   // free what we allocated on heap: these are not needed as we are exiting the program anyway;
