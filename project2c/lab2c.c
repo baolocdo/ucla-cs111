@@ -241,7 +241,7 @@ int main(int argc, char **argv)
   size = sprintf(debug_msg, "elasped time: %lldns\n", elasped_time_ns);
   write(1, debug_msg, size);
 
-  // Here we apply the "correction"
+  // Here we apply the "correction" with average sub list size
   size = sprintf(debug_msg, "per operation: %fns\n", (float)(elasped_time_ns / num_operations / ((float)num_elements / num_lists)));
   write(1, debug_msg, size);
   

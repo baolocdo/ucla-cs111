@@ -1,5 +1,5 @@
 main: lab2c.c SortedList.c
-	gcc -o lab2c -g lab2c.c SortedList.c -pthread -Wall
+	gcc -o lab2c -Wall -pg lab2c.c SortedList.c -pthread
 clean:
 	rm -rf lab2c
 	rm -rf *.o
