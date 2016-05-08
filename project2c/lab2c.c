@@ -242,7 +242,7 @@ int main(int argc, char **argv)
   write(1, debug_msg, size);
 
   // Here we apply the "correction"
-  size = sprintf(debug_msg, "per operation: %fns\n", (float)(elasped_time_ns / num_operations / (float)num_elements));
+  size = sprintf(debug_msg, "per operation: %fns\n", (float)(elasped_time_ns / num_operations / ((float)num_elements / num_lists)));
   write(1, debug_msg, size);
   
   // All sub lists are expected to be empty after we are done
