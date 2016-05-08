@@ -145,6 +145,10 @@ int main(int argc, char **argv)
         break;
       case 's':
         opt_sync = optarg[0];
+        break;
+      case 'l':
+        num_lists = atoi(optarg);
+        break;
       case 'y':
         for (i = 0; i < strlen(optarg); i++) {
           if (optarg[i] == 'i')
@@ -154,8 +158,6 @@ int main(int argc, char **argv)
           if (optarg[i] == 's')
             opt_yield |= SEARCH_YIELD;
         }
-      case 'l':
-        num_lists = atoi(optarg);
         break;
     }
   }
