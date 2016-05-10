@@ -10,20 +10,117 @@ zhehao@cs.ucla.edu
 * SortedList.c - the list implementation
 * SortedList.h - given list header
 * Makefile
+* graph1-avg-op-time-vs-threads-per-list.png - the first graph
 * README       - this file
 
 *** Answers ***
 
+2C.1A. Explain the change in performance of the synchronized methods as a function of the number of threads per list.
 
+When # of threads < # of lists, possibility of two threads contending for same list is lower, we’ll see fewer contentions, and the average time per op is rather small. When # of threads > # of lists, multiple threads could be more often contending for fewer lists, lock is more coarse-grained and longer time is spent waiting, so the average time per op grows large quickly.
+
+2C.1B. Explain why threads per list is a more interesting number than threads (for this particular measurement).
+
+For this particular measurement, the threads to list ratio better reflects how much contention there is; more threads than lists, higher chance of multiple threads contending for the same lists and less parallelism; less threads than lists, lower chance of multiple threads contending for the same lists and more parallelism.
+
+2C.2A. Compare the time per operation when increasing the lists value. Explain your observations.
+
+When the number of lists increases (especially when it's smaller than the number of threads), lock is per list so it's more fine-grained; With the same number of threads, less contention is likely to happen, thus less time is spent waiting and there's more parallelism, and the average time per op goes down till lock granularity is no longer the bottleneck.
+
+2C.2B. Compare the time per operation between mutex and spinlock. Explain your observations.
+
+Mutex is generally slightly slower than spinlock, with an exception in the 1 list case. For the >1 list case, this is mostly caused by mutex's overhead in waiting and going to sleep, and unlocking and waking up from sleep. Spinlock does not have this overhead, and with enough cores to handle threads' busy spinning, the total wall time of spinlock does not increase because of the busy spins. 
+For the 1-list case, mutex performs consistently better. This is most likely caused by spinlock's large amount of memory contention when multiple spinning threads are busy spinning which tries to access the same spinlock variable (as we have 1 list, thus only 1 spinlock). This is consistent with the observation of spinlock vs mutex with a single lock in project 2A.
+
+
+Note: for the following questions, we refer to the waiting thread as the main thread, and work thread as the child thread (as Arpaci does in his example.)
+
+2C.3A. Why must the mutex be held when pthread_cond_wait is called?
+
+Otherwise there's the possibility of main (waiting) thread going to sleeping forever. Before going to sleep, main thread need to lock done flag, so that the execution sequence of "main: check done=0, successful" => "child: do work, set done, signal, no one's waiting" => "main: call pthread_cond_wait" wouldn't cause main to sleep forever.
+
+2C.3B. Why must the mutex be released when the waiting thread is blocked?
+
+If we don’t release the lock, the child thread cannot get the lock, and we have a deadlock: main (waiting) thread holds the lock and waits for the child to finish, child waits for main to release the lock in order to proceed; we've all four requirements of a deadlock.
+
+2C.3C. Why must the mutex be reacquired when the calling thread resumes?
+
+We have a while loop to check the done flag; and each time we check, we should guarantee exclusive access of done. Otherwise the case in 2C.3A might appear.
+
+2C.3D. Why must mutex release be done inside of pthread_cond_wait?  Why can't the caller simply release the mutex before calling pthread_cond_wait?
+
+If we release the lock before going to sleep, we may never wake up. The execution sequence: "main: release lock" => "child: do work, set done, signal, no one's waiting" => "main: go to sleep with pthread_cond_wait" would cause this problem.
+
+2C.3E. Can pthread_cond_wait be implemented in user mode?  If so, how?  If it can only be implemented by a system call, explain why?
+
+No, it can only be implemented with a system call; we need to prevent preemption between put to sleep and unlock mutex, which cannot be done in user mode.
+
+*** GProf profiles ***
+
+Some examples reported below: first one being single threaded huge list.
+
+./lab2c --lists=1 --iterations=10000
+-----------------------------------------------------------------------
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 53.03      0.09     0.09    10000     9.02     9.02  SortedList_insert
+ 47.14      0.17     0.08    10000     8.01     8.01  SortedList_lookup
+  0.00      0.17     0.00    20000     0.00     0.00  hash_key
+  0.00      0.17     0.00    10000     0.00     0.00  SortedList_delete
+  0.00      0.17     0.00        2     0.00     0.00  SortedList_length
+
+Two examples of list values, multi-threaded, mutex locked; we can see that time proportion-wise it's similarly with the no lock case.
+
+./lab2c --lists=4 --iterations=10000 --sync=m --threads=8
+-----------------------------------------------------------------------
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 55.02      1.34     1.34    79070    16.98    16.98  SortedList_insert
+ 40.24      2.32     0.98    79061    12.42    12.42  SortedList_lookup
+  4.11      2.42     0.10                             thread_func
+  0.82      2.44     0.02       36   556.54   556.54  SortedList_length
+  0.00      2.44     0.00   157813     0.00     0.00  hash_key
+  0.00      2.44     0.00    79034     0.00     0.00  SortedList_delete
+
+./lab2c --lists=64 --iterations=10000 --sync=m --threads=8
+-----------------------------------------------------------------------
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 53.03      0.09     0.09    62918     1.43     1.43  SortedList_lookup
+ 35.36      0.15     0.06    65680     0.92     0.92  SortedList_insert
+  5.89      0.16     0.01      545    18.38    18.38  SortedList_length
+  5.89      0.17     0.01                             thread_func
+  0.00      0.17     0.00   125822     0.00     0.00  hash_key
+  0.00      0.17     0.00    63799     0.00     0.00  SortedList_delete
+
+Two examples of list values, multi-threaded, spin locked; we can see that with a small amount of lists, contentions are more often, and most time is spent spinning (thread_func). And with a larger amount of lists, contentions are more rare, thus less proportion of time is spent spinning, and a larger proportion is spent on the list functions.
+
+./lab2c --lists=4 --iterations=10000 --sync=s --threads=8
+-----------------------------------------------------------------------
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 91.14     29.59    29.59                             thread_func
+  4.78     31.15     1.55    75618    20.53    20.53  SortedList_insert
+  4.26     32.53     1.38    75997    18.19    18.19  SortedList_lookup
+  0.00     32.53     0.00   157590     0.00     0.00  hash_key
+  0.00     32.53     0.00    79242     0.00     0.00  SortedList_delete
+  0.00     32.53     0.00       34     0.00     0.00  SortedList_length
+
+./lab2c --lists=64 --iterations=10000 --sync=s --threads=8
+-----------------------------------------------------------------------
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 36.06      0.18     0.18                             thread_func
+ 34.06      0.35     0.17    57482     2.96     2.96  SortedList_insert
+ 26.05      0.48     0.13    56616     2.30     2.30  SortedList_lookup
+  2.00      0.49     0.01    62703     0.16     0.16  SortedList_delete
+  2.00      0.50     0.01      521    19.23    19.23  SortedList_length
+  0.00      0.50     0.00   123185     0.00     0.00  hash_key
+
+Note that the number of calls when multi-threaded with lock is not correct; Zhaoxing pointed the cause out in Piazza as well.
 
 *** Testing methodology ***
 
 For the statistics collection, a shell script is created which runs the program repeatedly with different parameters.
 
 All statistics were collected on seasnet lnxsrv07.
-
-*** Note ***
-
-The correction in 2nd graph is arguable. As the pseudo-randomized result has a (non-negligible) impact on the average time, the trend may not mean much; the general comparison between the two mechanisms could be slightly more meaningful.
-
-Also, since 2B.1A and 2B.2A use different metrics (corrections introduced to 2B.2A), need to remove the "/num_elements" in avg calculation to reproduce the result in 1A.
