@@ -15,6 +15,8 @@
 
 int ifd = 0;
 // TODO: test %x output for uint16, 32 and 64
+int num_groups;
+uint32_t block_size;
 
 struct ext2_super_block {
   uint32_t  s_inodes_count;   /* Inodes count */
@@ -49,6 +51,8 @@ struct ext2_group_desc
   uint32_t  bg_reserved[3];
 };
 
+struct ext2_group_desc * group_desc_table;
+
 // write the superblock
 int write_superblock() {
   int ret = pread(ifd, &superblock, SUPERBLOCK_SIZE, SUPERBLOCK_OFFSET);
@@ -58,7 +62,7 @@ int write_superblock() {
   }
   
   // special handing for block_size
-  uint32_t block_size = 1024 << superblock.s_log_block_size;
+  block_size = 1024 << superblock.s_log_block_size;
   
   // special handling for fragment_size
   int32_t fragment_shift = (int32_t) superblock.s_log_frag_size;
@@ -84,11 +88,11 @@ int write_superblock() {
 // write the group descriptor
 int write_group_descriptor() {
   int start = superblock.s_first_data_block + 1;
-  int num_groups = ceil((float)superblock.s_blocks_count / (float)superblock.s_blocks_per_group);
-  struct ext2_group_desc *group_desc_table = malloc(sizeof(struct ext2_group_desc) * num_groups);
+  num_groups = ceil((float)superblock.s_blocks_count / (float)superblock.s_blocks_per_group);
+  group_desc_table = malloc(sizeof(struct ext2_group_desc) * num_groups);
   
   int size = sizeof(struct ext2_group_desc) * num_groups;
-  int ret = pread(ifd, group_desc_table, size, start * (1024 << superblock.s_log_block_size));
+  int ret = pread(ifd, group_desc_table, size, start * block_size);
   if (ret < size) {
     perror("Unexpected group_desc_table read");
     exit(1);
@@ -108,13 +112,80 @@ int write_group_descriptor() {
       blocks_contained = superblock.s_blocks_count % superblock.s_blocks_per_group;
     }
     ret = sprintf(output_buffer, "%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32",%x,%x,%x\n", 
-    blocks_contained, group_desc_table[i].bg_free_blocks_count, group_desc_table[i].bg_free_inodes_count,
-    group_desc_table[i].bg_used_dirs_count, group_desc_table[i].bg_inode_bitmap, group_desc_table[i].bg_block_bitmap, 
-    group_desc_table[i].bg_inode_table);
+      blocks_contained, group_desc_table[i].bg_free_blocks_count, group_desc_table[i].bg_free_inodes_count,
+      group_desc_table[i].bg_used_dirs_count, group_desc_table[i].bg_inode_bitmap, group_desc_table[i].bg_block_bitmap, 
+      group_desc_table[i].bg_inode_table);
     ret += write(ofd, output_buffer, ret);
   }
 
   return ret;
+}
+
+// write the bitmap entries
+int write_bitmap_entry() {
+  int ofd = creat("my-bitmap.csv", 0666);
+  if (ofd < 0) {
+    perror("Unable to open output file");
+    exit(1);
+  }
+  char output_buffer[BUFFER_SIZE] = {0};
+  int i = 0, j = 0, k = 0, ret = 0, inode_idx = 1, inode_upper_bound = 0, block_upper_bound = 0, done = 0, block_idx = 1;
+  uint8_t *inode_bitmap_block = (uint8_t *)malloc(sizeof(uint8_t) * block_size);
+  uint8_t *block_bitmap_block = (uint8_t *)malloc(sizeof(uint8_t) * block_size);
+
+  for (i = 0; i < num_groups; i++) {
+    block_upper_bound += superblock.s_blocks_per_group;
+    inode_upper_bound += superblock.s_inodes_per_group;
+    if (i == num_groups - 1) {
+      block_upper_bound = superblock.s_blocks_count;
+      inode_upper_bound = superblock.s_inodes_count;
+    }
+
+    done = 0;
+    pread(ifd, block_bitmap_block, block_size, group_desc_table[i].bg_block_bitmap * block_size);
+    for (j = 0; j < block_size; j++) {
+      if (done) {
+        break;
+      }
+      for (k = 0; k < 8; k++) {
+        if (block_idx <= block_upper_bound) {
+          if ((block_bitmap_block[j] & (1 << k)) == 0) {
+            ret = sprintf(output_buffer, "%x,%"PRIu32"\n", 
+              group_desc_table[i].bg_block_bitmap, block_idx);
+            write(ofd, output_buffer, ret);
+          }
+          block_idx ++;
+        } else {
+          done = 1;
+          break;
+        }
+      }
+    }
+    
+    done = 0;
+    pread(ifd, inode_bitmap_block, block_size, group_desc_table[i].bg_inode_bitmap * block_size);
+    for (j = 0; j < block_size; j++) {
+      if (done) {
+        break;
+      }
+      for (k = 0; k < 8; k++) {
+        if (inode_idx <= inode_upper_bound) {
+          if ((inode_bitmap_block[j] & (1 << k)) == 0) {
+            ret = sprintf(output_buffer, "%x,%"PRIu32"\n", 
+              group_desc_table[i].bg_inode_bitmap, inode_idx);
+            write(ofd, output_buffer, ret);
+          }
+          inode_idx ++;
+        } else {
+          done = 1;
+          break;
+        }
+      }
+    }
+  }
+  free(inode_bitmap_block);
+  free(block_bitmap_block);
+  return 1;
 }
 
 int main(int argc, char **argv) {
@@ -131,7 +202,7 @@ int main(int argc, char **argv) {
   
   write_superblock();
   write_group_descriptor();
-  
+  write_bitmap_entry();
 
   return 0;
 }
