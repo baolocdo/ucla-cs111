@@ -51,6 +51,30 @@ struct ext2_group_desc
   uint32_t  bg_reserved[3];
 };
 
+/*
+ * Structure of an inode on the disk
+ */
+struct ext2_inode {
+  uint16_t  i_mode;   /* File mode */
+  uint16_t  i_uid;    /* Low 16 bits of Owner Uid */
+  uint32_t  i_size;   /* Size in bytes */
+  uint32_t  i_atime;  /* Access time */
+  uint32_t  i_ctime;  /* Creation time */
+  uint32_t  i_mtime;  /* Modification time */
+  uint32_t  i_dtime;  /* Deletion Time */
+  uint16_t  i_gid;    /* Low 16 bits of Group Id */
+  uint16_t  i_links_count;  /* Links count */
+  uint32_t  i_blocks; /* Blocks count */
+  uint32_t  i_flags;  /* File flags */
+  uint32_t  i_osd1;       /* OS dependent 1 */
+  uint32_t  i_block[15];/* Pointers to blocks */
+  uint32_t  i_generation; /* File version (for NFS) */
+  uint32_t  i_file_acl; /* File ACL */
+  uint32_t  i_dir_acl;  /* Directory ACL */
+  uint32_t  i_faddr;  /* Fragment address */
+  uint16_t  i_osd2[6];        /* OS dependent 2 */
+} inode;
+
 struct ext2_group_desc * group_desc_table;
 
 // write the superblock
@@ -188,6 +212,67 @@ int write_bitmap_entry() {
   return 1;
 }
 
+// write the inodes
+int write_inodes() {
+  int ofd = creat("my-inode.csv", 0666);
+  if (ofd < 0) {
+    perror("Unable to open output file");
+    exit(1);
+  }
+  char output_buffer[BUFFER_SIZE] = {0};
+  int i = 0, j = 0, k = 0, m = 0, ret = 0, inode_idx = 1, inode_upper_bound = 0, done = 0;
+  uint8_t *inode_bitmap_block = (uint8_t *)malloc(sizeof(uint8_t) * block_size);
+
+  for (i = 0; i < num_groups; i++) {
+    inode_upper_bound += superblock.s_inodes_per_group;
+    if (i == num_groups - 1) {
+      inode_upper_bound = superblock.s_inodes_count;
+    }
+    
+    done = 0;
+    pread(ifd, inode_bitmap_block, block_size, group_desc_table[i].bg_inode_bitmap * block_size);
+    for (j = 0; j < block_size; j++) {
+      if (done) {
+        break;
+      }
+      for (k = 0; k < 8; k++) {
+        if (inode_idx <= inode_upper_bound) {
+          if ((inode_bitmap_block[j] & (1 << k)) != 0) {
+            pread(ifd, &inode, sizeof(struct ext2_inode), group_desc_table[i].bg_inode_table * block_size + sizeof(struct ext2_inode) * (j * 8 + k));
+            char file_type = '?';
+            if (inode.i_mode & 0x8000) {
+              file_type = 'f';
+            } else if (inode.i_mode & 0xA000) {
+              file_type = 's';
+            } else if (inode.i_mode & 0x4000) {
+              file_type = 'd';
+            }
+            uint32_t owner_id = (inode.i_osd2[2] << 16) + inode.i_uid;
+            uint32_t group_id = (inode.i_osd2[3] << 16) + inode.i_gid;
+            uint32_t i_blocks = inode.i_blocks / (2 << superblock.s_log_block_size);
+            ret = sprintf(output_buffer, "%u,%c,%o,%u,%u,%u,%x,%x,%x,%u,%u", 
+              inode_idx, file_type, inode.i_mode, owner_id, group_id, 
+              inode.i_links_count, inode.i_ctime, inode.i_mtime, inode.i_atime,
+              inode.i_size, i_blocks);
+            write(ofd, output_buffer, ret);
+            for (m = 0; m < 15; m++) {
+              ret = sprintf(output_buffer, ",%x", inode.i_block[m]);
+              write(ofd, output_buffer, ret);
+            }
+            write(ofd, "\n", 1);
+          }
+          inode_idx ++;
+        } else {
+          done = 1;
+          break;
+        }
+      }
+    }
+  }
+  free(inode_bitmap_block);
+  return 1;
+}
+
 int main(int argc, char **argv) {
   if (argc > 2) {
     perror("Unexpected amount of arguments");
@@ -203,6 +288,7 @@ int main(int argc, char **argv) {
   write_superblock();
   write_group_descriptor();
   write_bitmap_entry();
+  write_inodes();
 
   return 0;
 }
