@@ -426,8 +426,7 @@ int write_directory_entries() {
                 int position = temp->addr;
                 memset(dirent.name, 0, 256);
                 pread(ifd, &dirent, 8, position);
-                position += 8;
-                pread(ifd, &(dirent.name), dirent.name_len, position);
+                pread(ifd, &(dirent.name), dirent.name_len, position + 8);
 
                 // TODO: debug 2nd field
                 if (dirent.inode != 0) {
@@ -438,11 +437,10 @@ int write_directory_entries() {
                 entry_idx++;
 
                 while (dirent.rec_len + position < temp->addr + block_size) {
-                  position += (dirent.rec_len - 8);
+                  position += dirent.rec_len;
                   memset(dirent.name, 0, 256);
                   pread(ifd, &dirent, 8, position);
-                  position += 8;
-                  pread(ifd, &(dirent.name), dirent.name_len, position);
+                  pread(ifd, &(dirent.name), dirent.name_len, position + 8);
 
                   if (dirent.inode != 0) {
                     ret = sprintf(output_buffer, "%u,%u,%u,%u,%u,\"%s\"\n", 
