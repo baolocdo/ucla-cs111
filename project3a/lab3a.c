@@ -19,66 +19,70 @@ int ifd = 0;
 int num_groups;
 uint32_t block_size;
 
+// super_block structure for moving data with pread
 struct ext2_super_block {
-  uint32_t  s_inodes_count;        /* Inodes count */
-  uint32_t  s_blocks_count;        /* Blocks count */
-  uint32_t  s_r_blocks_count;      /* Reserved blocks count */
-  uint32_t  s_free_blocks_count;   /* Free blocks count */
-  uint32_t  s_free_inodes_count;   /* Free inodes count */
-  uint32_t  s_first_data_block;    /* First Data Block */
-  uint32_t  s_log_block_size;      /* Block size */
-  uint32_t  s_log_frag_size;       /* Fragment size */
-  uint32_t  s_blocks_per_group;    /* # Blocks per group */
-  uint32_t  s_frags_per_group;     /* # Fragments per group */
-  uint32_t  s_inodes_per_group;    /* # Inodes per group */
-  uint32_t  s_mtime;               /* Mount time */
-  uint32_t  s_wtime;               /* Write time */
-  uint16_t  s_mnt_count;           /* Mount count */
-  uint16_t  s_max_mnt_count;       /* Maximal mount count */
-  uint16_t  s_magic;               /* Magic signature */
-  uint16_t  s_state;               /* File system state */
-  uint8_t   all_the_rest[SUPERBLOCK_SIZE - 60];
+  uint32_t s_inodes_count;        /* Inodes count */
+  uint32_t s_blocks_count;        /* Blocks count */
+  uint32_t s_r_blocks_count;      /* Reserved blocks count */
+  uint32_t s_free_blocks_count;   /* Free blocks count */
+  uint32_t s_free_inodes_count;   /* Free inodes count */
+  uint32_t s_first_data_block;    /* First Data Block */
+  uint32_t s_log_block_size;      /* Block size */
+  uint32_t s_log_frag_size;       /* Fragment size */
+  uint32_t s_blocks_per_group;    /* # Blocks per group */
+  uint32_t s_frags_per_group;     /* # Fragments per group */
+  uint32_t s_inodes_per_group;    /* # Inodes per group */
+  uint32_t s_mtime;               /* Mount time */
+  uint32_t s_wtime;               /* Write time */
+  uint16_t s_mnt_count;           /* Mount count */
+  uint16_t s_max_mnt_count;       /* Maximal mount count */
+  uint16_t s_magic;               /* Magic signature */
+  uint16_t s_state;               /* File system state */
+  uint8_t  all_the_rest[SUPERBLOCK_SIZE - 60];
 } superblock;
 
+// group_desc_table structure for moving data with pread
 struct ext2_group_desc
 {
-  uint32_t  bg_block_bitmap;    /* Blocks bitmap block */
-  uint32_t  bg_inode_bitmap;    /* Inodes bitmap block */
-  uint32_t  bg_inode_table;     /* Inodes table block */
-  uint16_t  bg_free_blocks_count; /* Free blocks count */
-  uint16_t  bg_free_inodes_count; /* Free inodes count */
-  uint16_t  bg_used_dirs_count; /* Directories count */
-  uint16_t  bg_pad;
-  uint32_t  bg_reserved[3];
+  uint32_t bg_block_bitmap;    /* Blocks bitmap block */
+  uint32_t bg_inode_bitmap;    /* Inodes bitmap block */
+  uint32_t bg_inode_table;     /* Inodes table block */
+  uint16_t bg_free_blocks_count; /* Free blocks count */
+  uint16_t bg_free_inodes_count; /* Free inodes count */
+  uint16_t bg_used_dirs_count; /* Directories count */
+  uint16_t bg_pad;
+  uint32_t bg_reserved[3];
 };
 
+// ext2_inode structure for moving data with pread
 struct ext2_inode {
-  uint16_t  i_mode;   /* File mode */
-  uint16_t  i_uid;    /* Low 16 bits of Owner Uid */
-  uint32_t  i_size;   /* Size in bytes */
-  uint32_t  i_atime;  /* Access time */
-  uint32_t  i_ctime;  /* Creation time */
-  uint32_t  i_mtime;  /* Modification time */
-  uint32_t  i_dtime;  /* Deletion Time */
-  uint16_t  i_gid;    /* Low 16 bits of Group Id */
-  uint16_t  i_links_count;  /* Links count */
-  uint32_t  i_blocks; /* Blocks count */
-  uint32_t  i_flags;  /* File flags */
-  uint32_t  i_osd1;       /* OS dependent 1 */
-  uint32_t  i_block[15];  /* Pointers to blocks */
-  uint32_t  i_generation; /* File version (for NFS) */
-  uint32_t  i_file_acl;   /* File ACL */
-  uint32_t  i_dir_acl;    /* Directory ACL */
-  uint32_t  i_faddr;      /* Fragment address */
-  uint16_t  i_osd2[6];    /* OS dependent 2 */
+  uint16_t i_mode;   /* File mode */
+  uint16_t i_uid;    /* Low 16 bits of Owner Uid */
+  uint32_t i_size;   /* Size in bytes */
+  uint32_t i_atime;  /* Access time */
+  uint32_t i_ctime;  /* Creation time */
+  uint32_t i_mtime;  /* Modification time */
+  uint32_t i_dtime;  /* Deletion Time */
+  uint16_t i_gid;    /* Low 16 bits of Group Id */
+  uint16_t i_links_count;  /* Links count */
+  uint32_t i_blocks; /* Blocks count */
+  uint32_t i_flags;  /* File flags */
+  uint32_t i_osd1;       /* OS dependent 1 */
+  uint32_t i_block[15];  /* Pointers to blocks */
+  uint32_t i_generation; /* File version (for NFS) */
+  uint32_t i_file_acl;   /* File ACL */
+  uint32_t i_dir_acl;    /* Directory ACL */
+  uint32_t i_faddr;      /* Fragment address */
+  uint16_t i_osd2[6];    /* OS dependent 2 */
 } inode;
 
+// ext2_directory structure for moving data with pread
 struct ext2_directory {
-  uint32_t  inode;
-  uint16_t  rec_len;
-  uint8_t   name_len;
-  uint8_t   file_type;
-  char      name[256];
+  uint32_t inode;
+  uint16_t rec_len;
+  uint8_t  name_len;
+  uint8_t  file_type;
+  char     name[256];
 } dirent;
 
 // structure containing the linked list of blocks of an inode
@@ -110,6 +114,8 @@ int read_inode(int inode, struct ext2_inode* return_inode) {
   return -1;
 }
 
+// Given an indirect block, append all the blocks it contains to a data block linked list
+// Helper function for 5
 struct blk_t* read_inode_indirect_block(struct blk_t* tail, uint32_t block_num) {
   int i;
   uint32_t *block = malloc(block_size);
@@ -128,6 +134,27 @@ struct blk_t* read_inode_indirect_block(struct blk_t* tail, uint32_t block_num) 
   return tail;
 }
 
+// Given an indirect block, write all of its data blocks to file
+// Helper function for 6
+int write_inode_indirect_block(int ofd, uint32_t block_num) {
+  int i = 0, ret = 0;
+  uint32_t *block = malloc(block_size);
+  char output_buffer[BUFFER_SIZE] = {0};
+
+  pread(ifd, block, block_size, block_num * block_size);
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      ret = sprintf(output_buffer, "%x,%u,%x\n", 
+        block_num, i, block[i]);
+      write(ofd, output_buffer, ret);
+    }
+  }
+  free(block);
+  return 1;
+}
+
+// Given a double indirect block, append all the data blocks it contains to a data block linked list
+// Helper function for 5
 struct blk_t* read_inode_double_indirect_block(struct blk_t* tail, int block_num) {
   int i;
   uint32_t *block = malloc(block_size);
@@ -141,6 +168,33 @@ struct blk_t* read_inode_double_indirect_block(struct blk_t* tail, int block_num
   return tail;
 }
 
+// Given a double indirect block, write all of its indirect blocks to file, 
+//   then write the data blocks in those indirect blocks to file
+// Helper function for 6
+int write_inode_double_indirect_block(int ofd, uint32_t block_num) {
+  int i = 0, ret = 0;
+  uint32_t *block = malloc(block_size);
+  char output_buffer[BUFFER_SIZE] = {0};
+
+  pread(ifd, block, block_size, block_num * block_size);
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      ret = sprintf(output_buffer, "%x,%u,%x\n", 
+        block_num, i, block[i]);
+      write(ofd, output_buffer, ret);
+    }
+  }
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      write_inode_indirect_block(ofd, block[i]);
+    }
+  }
+  free(block);
+  return 1;
+}
+
+// Given a triple indirect block, append all the data blocks it contains to a data block linked list
+// Helper function for 5
 struct blk_t* read_inode_triple_indirect_block(struct blk_t* tail, int block_num) {
   int i;
   uint32_t *block = malloc(block_size);
@@ -152,6 +206,34 @@ struct blk_t* read_inode_triple_indirect_block(struct blk_t* tail, int block_num
   }
   free(block);
   return tail;
+}
+
+// Given a triple indirect block, first write all of its double indirect blocks to file; 
+//   Then for each double indirect block, first write the indirect blocks that it contains, 
+//   Then write all the data blocks in each indirect block
+//   The csv would look like triple-block, double-block-1, in-block-1-1, in-block-1-2...double-block-2, in-block-2-1, in-block-2-2...
+//   An alternative is triple-block, double-block-1, double-block-2, in-block-1-1, in-block-1-2,..., in-block-2-1, in-block-2-2...
+// Helper function for 6
+int write_inode_triple_indirect_block(int ofd, uint32_t block_num) {
+  int i = 0, ret = 0;
+  char output_buffer[BUFFER_SIZE] = {0};
+
+  uint32_t *block = malloc(block_size);
+  pread(ifd, block, block_size, block_num * block_size);
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      ret = sprintf(output_buffer, "%x,%u,%x\n", 
+        block_num, i, block[i]);
+      write(ofd, output_buffer, ret);
+    }
+  }
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      write_inode_double_indirect_block(ofd, block[i]);
+    }
+  }
+  free(block);
+  return 1;
 }
 
 // read the direct/indirect block, store the result into a linked list
@@ -480,8 +562,7 @@ int write_indirect() {
     perror("Unable to open output file");
     exit(1);
   }
-  char output_buffer[BUFFER_SIZE] = {0};
-  int i = 0, j = 0, k = 0, ret = 0, inode_idx = 1, inode_upper_bound = 0, done = 0;
+  int i = 0, j = 0, k = 0, inode_idx = 1, inode_upper_bound = 0, done = 0;
   uint8_t *inode_bitmap_block = (uint8_t *)malloc(sizeof(uint8_t) * block_size);
 
   for (i = 0; i < num_groups; i++) {
@@ -502,30 +583,18 @@ int write_indirect() {
             pread(ifd, &inode, sizeof(struct ext2_inode), group_desc_table[i].bg_inode_table * block_size + sizeof(struct ext2_inode) * (j * 8 + k));
             uint32_t i_blocks = inode.i_blocks / (2 << superblock.s_log_block_size);
             if (i_blocks > 10) {
-              struct blk_t *head = read_inode_blocks(inode_idx);
-              struct blk_t *temp = head;
-              uint32_t entry_idx = 0;
-              uint32_t prev_containing_block = -1;
 
-              while (temp != NULL) {
-                if (temp->containing_block == -1) {
-                  temp = temp->next;
-                  entry_idx = 0;
-                  continue;
-                }
-                // this way of telling if we should restart the counter works as our scan is sequential (per-indirect-block)
-                if (prev_containing_block != temp->containing_block) {
-                  entry_idx = 0;
-                }
-                ret = sprintf(output_buffer, "%x,%u,%x\n", 
-                  temp->containing_block, entry_idx, temp->addr / block_size);
-                write(ofd, output_buffer, ret);
-                entry_idx ++;
-                prev_containing_block = temp->containing_block;
-
-                temp = temp->next;
+              // indirect blocks; 0 is not considered as an indirect block
+              if (inode.i_block[12]) {
+                write_inode_indirect_block(ofd, inode.i_block[12]);
               }
-              
+              if (inode.i_block[13]) {
+                write_inode_double_indirect_block(ofd, inode.i_block[13]);
+              }
+              if (inode.i_block[14]) {
+                write_inode_triple_indirect_block(ofd, inode.i_block[14]);
+              }
+
             }
           }
           inode_idx ++;
