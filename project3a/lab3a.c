@@ -15,6 +15,8 @@
 
 int ifd = 0;
 // TODO: test %x output for uint16, 32 and 64
+// TODO: direct/indirect block 0 issue: per doc, a value of 0 in this array effectively terminates it with no further block being defined.  All the remaining entries of the array should still be set to 0.
+
 int num_groups;
 uint32_t block_size;
 
@@ -51,9 +53,6 @@ struct ext2_group_desc
   uint32_t  bg_reserved[3];
 };
 
-/*
- * Structure of an inode on the disk
- */
 struct ext2_inode {
   uint16_t  i_mode;   /* File mode */
   uint16_t  i_uid;    /* Low 16 bits of Owner Uid */
@@ -75,7 +74,124 @@ struct ext2_inode {
   uint16_t  i_osd2[6];        /* OS dependent 2 */
 } inode;
 
+struct ext2_directory {
+  uint32_t  inode;
+  uint16_t  rec_len;
+  uint8_t   name_len;
+  uint8_t   file_type;
+  char      name[256];
+} dirent;
+
+// structure containing the linked list of blocks of an inode
+struct blk_t {
+  int addr;
+  struct blk_t *next;
+};
+
 struct ext2_group_desc * group_desc_table;
+
+// read the inode by number, if the inode is marked as '1' by inode-bitmap; 
+// has to be called after group_desc_table and superblock is populated
+// we do not call this in inode traversal, as we don't want the inode-bitmap to be read byte by byte
+int read_inode(int inode, struct ext2_inode* return_inode) {
+  if (inode > 0) {
+    int i = inode - 1;
+    int block_group = i / superblock.s_inodes_per_group;
+    int block_group_offset = i % superblock.s_inodes_per_group;
+    
+    uint8_t inode_bitmap;
+    pread(ifd, &inode_bitmap, 1, group_desc_table[block_group].bg_inode_bitmap * block_size + block_group_offset / 8);
+  
+    if (inode_bitmap & (1 << (block_group_offset % 8))) {
+      pread(ifd, return_inode, sizeof(struct ext2_inode), group_desc_table[block_group].bg_inode_table * block_size + sizeof(struct ext2_inode) * block_group_offset);
+      return 0;
+    }
+  }
+  return -1;
+}
+
+struct blk_t* read_inode_indirect_block(struct blk_t* tail, int block_num) {
+  int i;
+  uint32_t *block = malloc(block_size);
+  pread(ifd, block, block_size, block_num * block_size);
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      struct blk_t* element = malloc(sizeof(struct blk_t));
+      element->next = NULL;
+      element->addr = block[i] * block_size;
+      tail->next = element;
+      tail = element;
+    }
+  }
+  free(block);
+  return tail;
+}
+
+struct blk_t* read_inode_double_indirect_block(struct blk_t* tail, int block_num) {
+  int i;
+  uint32_t *block = malloc(block_size);
+  pread(ifd, block, block_size, block_num * block_size);
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      tail = read_inode_indirect_block(tail, block[i]);
+    }
+  }
+  free(block);
+  return tail;
+}
+
+struct blk_t* read_inode_triple_indirect_block(struct blk_t* tail, int block_num) {
+  int i;
+  uint32_t *block = malloc(block_size);
+  pread(ifd, block, block_size, block_num * block_size);
+  for (i = 0; i < block_size / 4; i++) {
+    if (block[i]) {
+      tail = read_inode_double_indirect_block(tail, block[i]);
+    }
+  }
+  free(block);
+  return tail;
+}
+
+// read the direct/indirect block, store the result into a linked list
+struct blk_t* read_inode_blocks(int inode_num) {
+  struct ext2_inode this_inode;
+  if (read_inode(inode_num, &this_inode) < 0) {
+    return NULL;
+  } else {
+    struct blk_t *head = NULL;
+    struct blk_t *tail = NULL;
+    int j;
+
+    // direct blocks, linked list elements are allocated on heap so that they persist after function returns
+    // only non-0 blocks are considered
+    for (j = 0; j < 12 && this_inode.i_block[j]; j++) {
+      struct blk_t* element = malloc(sizeof(struct blk_t));
+      element->next = NULL;
+      element->addr = this_inode.i_block[j] * block_size;
+      if (tail == NULL) {
+        head = element;
+      } else {
+        tail->next = element;
+      }
+      tail = element;
+    }
+    if (j == 12) {
+      // indirect blocks; 0 is not considered as an indirect block
+      if (this_inode.i_block[12]) {
+        tail = read_inode_indirect_block(tail, this_inode.i_block[12]);
+      }
+      if (this_inode.i_block[13]) {
+        tail = read_inode_double_indirect_block(tail, this_inode.i_block[13]);
+      }
+      if (this_inode.i_block[14]) {
+        tail = read_inode_triple_indirect_block(tail, this_inode.i_block[14]);
+      }
+    }
+    return head;
+  }
+  return NULL;
+}
 
 // write the superblock
 int write_superblock() {
@@ -273,6 +389,86 @@ int write_inodes() {
   return 1;
 }
 
+// write the directory entries
+int write_directory_entries() {
+  // similar code as inode_traversal; did not record inode_traversal results so that each of these functions can work by themselves
+  int ofd = creat("my-directory.csv", 0666);
+  if (ofd < 0) {
+    perror("Unable to open output file");
+    exit(1);
+  }
+  char output_buffer[BUFFER_SIZE] = {0};
+  int i = 0, j = 0, k = 0, ret = 0, inode_idx = 1, inode_upper_bound = 0, done = 0;
+  uint8_t *inode_bitmap_block = (uint8_t *)malloc(sizeof(uint8_t) * block_size);
+
+  for (i = 0; i < num_groups; i++) {
+    inode_upper_bound += superblock.s_inodes_per_group;
+    if (i == num_groups - 1) {
+      inode_upper_bound = superblock.s_inodes_count;
+    }
+    
+    done = 0;
+    pread(ifd, inode_bitmap_block, block_size, group_desc_table[i].bg_inode_bitmap * block_size);
+    for (j = 0; j < block_size; j++) {
+      if (done) {
+        break;
+      }
+      for (k = 0; k < 8; k++) {
+        if (inode_idx <= inode_upper_bound) {
+          if (inode_bitmap_block[j] & (1 << k)) {
+            pread(ifd, &inode, sizeof(struct ext2_inode), group_desc_table[i].bg_inode_table * block_size + sizeof(struct ext2_inode) * (j * 8 + k));
+            if (inode.i_mode & 0x4000) {
+              struct blk_t *head = read_inode_blocks(inode_idx);
+              struct blk_t *temp = head;
+              uint32_t entry_idx = 0;
+
+              while (temp != NULL) {
+                int position = temp->addr;
+                memset(dirent.name, 0, 256);
+                pread(ifd, &dirent, 8, position);
+                position += 8;
+                pread(ifd, &(dirent.name), dirent.name_len, position);
+
+                // TODO: debug 2nd field
+                if (dirent.inode != 0) {
+                  ret = sprintf(output_buffer, "%u,%u,%u,%u,%u,\"%s\"\n", 
+                    inode_idx, entry_idx, dirent.rec_len, dirent.name_len, dirent.inode, dirent.name);
+                  write(ofd, output_buffer, ret);
+                }
+                entry_idx++;
+
+                while (dirent.rec_len + position < temp->addr + block_size) {
+                  position += (dirent.rec_len - 8);
+                  memset(dirent.name, 0, 256);
+                  pread(ifd, &dirent, 8, position);
+                  position += 8;
+                  pread(ifd, &(dirent.name), dirent.name_len, position);
+
+                  if (dirent.inode != 0) {
+                    ret = sprintf(output_buffer, "%u,%u,%u,%u,%u,\"%s\"\n", 
+                      inode_idx, entry_idx, dirent.rec_len, dirent.name_len, dirent.inode, dirent.name);
+                    write(ofd, output_buffer, ret);
+                  }
+                  entry_idx++;
+                }
+
+                temp = temp->next;
+              }
+              
+            }
+          }
+          inode_idx ++;
+        } else {
+          done = 1;
+          break;
+        }
+      }
+    }
+  }
+  free(inode_bitmap_block);
+  return 1;
+}
+
 int main(int argc, char **argv) {
   if (argc > 2) {
     perror("Unexpected amount of arguments");
@@ -289,6 +485,7 @@ int main(int argc, char **argv) {
   write_group_descriptor();
   write_bitmap_entry();
   write_inodes();
+  write_directory_entries();
 
   return 0;
 }
