@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <math.h>
 
 #define BUFFER_SIZE 4096
 
@@ -232,7 +231,10 @@ int write_superblock() {
 // write the group descriptor
 int write_group_descriptor() {
   int start = superblock.s_first_data_block + 1;
-  num_groups = ceil((float)superblock.s_blocks_count / (float)superblock.s_blocks_per_group);
+  num_groups = superblock.s_blocks_count / superblock.s_blocks_per_group;
+  if (superblock.s_blocks_count % superblock.s_blocks_per_group) {
+    num_groups++;
+  }
   group_desc_table = malloc(sizeof(struct ext2_group_desc) * num_groups);
   
   int size = sizeof(struct ext2_group_desc) * num_groups;
