@@ -21,23 +21,23 @@ int num_groups;
 uint32_t block_size;
 
 struct ext2_super_block {
-  uint32_t  s_inodes_count;   /* Inodes count */
-  uint32_t  s_blocks_count;   /* Blocks count */
-  uint32_t  s_r_blocks_count; /* Reserved blocks count */
-  uint32_t  s_free_blocks_count;  /* Free blocks count */
-  uint32_t  s_free_inodes_count;  /* Free inodes count */
-  uint32_t  s_first_data_block; /* First Data Block */
-  uint32_t  s_log_block_size; /* Block size */
-  uint32_t  s_log_frag_size;  /* Fragment size */
-  uint32_t  s_blocks_per_group; /* # Blocks per group */
-  uint32_t  s_frags_per_group;  /* # Fragments per group */
-  uint32_t  s_inodes_per_group; /* # Inodes per group */
-  uint32_t  s_mtime;    /* Mount time */
-  uint32_t  s_wtime;    /* Write time */
-  uint16_t  s_mnt_count;    /* Mount count */
-  uint16_t  s_max_mnt_count;  /* Maximal mount count */
-  uint16_t  s_magic;    /* Magic signature */
-  uint16_t  s_state;    /* File system state */
+  uint32_t  s_inodes_count;        /* Inodes count */
+  uint32_t  s_blocks_count;        /* Blocks count */
+  uint32_t  s_r_blocks_count;      /* Reserved blocks count */
+  uint32_t  s_free_blocks_count;   /* Free blocks count */
+  uint32_t  s_free_inodes_count;   /* Free inodes count */
+  uint32_t  s_first_data_block;    /* First Data Block */
+  uint32_t  s_log_block_size;      /* Block size */
+  uint32_t  s_log_frag_size;       /* Fragment size */
+  uint32_t  s_blocks_per_group;    /* # Blocks per group */
+  uint32_t  s_frags_per_group;     /* # Fragments per group */
+  uint32_t  s_inodes_per_group;    /* # Inodes per group */
+  uint32_t  s_mtime;               /* Mount time */
+  uint32_t  s_wtime;               /* Write time */
+  uint16_t  s_mnt_count;           /* Mount count */
+  uint16_t  s_max_mnt_count;       /* Maximal mount count */
+  uint16_t  s_magic;               /* Magic signature */
+  uint16_t  s_state;               /* File system state */
   uint8_t   all_the_rest[SUPERBLOCK_SIZE - 60];
 } superblock;
 
@@ -45,7 +45,7 @@ struct ext2_group_desc
 {
   uint32_t  bg_block_bitmap;    /* Blocks bitmap block */
   uint32_t  bg_inode_bitmap;    /* Inodes bitmap block */
-  uint32_t  bg_inode_table;   /* Inodes table block */
+  uint32_t  bg_inode_table;     /* Inodes table block */
   uint16_t  bg_free_blocks_count; /* Free blocks count */
   uint16_t  bg_free_inodes_count; /* Free inodes count */
   uint16_t  bg_used_dirs_count; /* Directories count */
@@ -66,12 +66,12 @@ struct ext2_inode {
   uint32_t  i_blocks; /* Blocks count */
   uint32_t  i_flags;  /* File flags */
   uint32_t  i_osd1;       /* OS dependent 1 */
-  uint32_t  i_block[15];/* Pointers to blocks */
+  uint32_t  i_block[15];  /* Pointers to blocks */
   uint32_t  i_generation; /* File version (for NFS) */
-  uint32_t  i_file_acl; /* File ACL */
-  uint32_t  i_dir_acl;  /* Directory ACL */
-  uint32_t  i_faddr;  /* Fragment address */
-  uint16_t  i_osd2[6];        /* OS dependent 2 */
+  uint32_t  i_file_acl;   /* File ACL */
+  uint32_t  i_dir_acl;    /* Directory ACL */
+  uint32_t  i_faddr;      /* Fragment address */
+  uint16_t  i_osd2[6];    /* OS dependent 2 */
 } inode;
 
 struct ext2_directory {
@@ -86,6 +86,7 @@ struct ext2_directory {
 struct blk_t {
   int addr;
   struct blk_t *next;
+  uint32_t containing_block;
 };
 
 struct ext2_group_desc * group_desc_table;
@@ -110,7 +111,7 @@ int read_inode(int inode, struct ext2_inode* return_inode) {
   return -1;
 }
 
-struct blk_t* read_inode_indirect_block(struct blk_t* tail, int block_num) {
+struct blk_t* read_inode_indirect_block(struct blk_t* tail, uint32_t block_num) {
   int i;
   uint32_t *block = malloc(block_size);
   pread(ifd, block, block_size, block_num * block_size);
@@ -119,6 +120,7 @@ struct blk_t* read_inode_indirect_block(struct blk_t* tail, int block_num) {
       struct blk_t* element = malloc(sizeof(struct blk_t));
       element->next = NULL;
       element->addr = block[i] * block_size;
+      element->containing_block = block_num;
       tail->next = element;
       tail = element;
     }
@@ -161,7 +163,7 @@ struct blk_t* read_inode_blocks(int inode_num) {
   } else {
     struct blk_t *head = NULL;
     struct blk_t *tail = NULL;
-    int j;
+    int j = 0;
 
     // direct blocks, linked list elements are allocated on heap so that they persist after function returns
     // only non-0 blocks are considered
@@ -169,6 +171,7 @@ struct blk_t* read_inode_blocks(int inode_num) {
       struct blk_t* element = malloc(sizeof(struct blk_t));
       element->next = NULL;
       element->addr = this_inode.i_block[j] * block_size;
+      element->containing_block = -1;
       if (tail == NULL) {
         head = element;
       } else {
@@ -176,6 +179,7 @@ struct blk_t* read_inode_blocks(int inode_num) {
       }
       tail = element;
     }
+    
     if (j == 12) {
       // indirect blocks; 0 is not considered as an indirect block
       if (this_inode.i_block[12]) {
@@ -467,6 +471,73 @@ int write_directory_entries() {
   return 1;
 }
 
+int write_indirect() {
+  // similar code as inode_traversal; did not record inode_traversal results so that each of these functions can work by themselves
+  int ofd = creat("my-indirect.csv", 0666);
+  if (ofd < 0) {
+    perror("Unable to open output file");
+    exit(1);
+  }
+  char output_buffer[BUFFER_SIZE] = {0};
+  int i = 0, j = 0, k = 0, ret = 0, inode_idx = 1, inode_upper_bound = 0, done = 0;
+  uint8_t *inode_bitmap_block = (uint8_t *)malloc(sizeof(uint8_t) * block_size);
+
+  for (i = 0; i < num_groups; i++) {
+    inode_upper_bound += superblock.s_inodes_per_group;
+    if (i == num_groups - 1) {
+      inode_upper_bound = superblock.s_inodes_count;
+    }
+    
+    done = 0;
+    pread(ifd, inode_bitmap_block, block_size, group_desc_table[i].bg_inode_bitmap * block_size);
+    for (j = 0; j < block_size; j++) {
+      if (done) {
+        break;
+      }
+      for (k = 0; k < 8; k++) {
+        if (inode_idx <= inode_upper_bound) {
+          if (inode_bitmap_block[j] & (1 << k)) {
+            pread(ifd, &inode, sizeof(struct ext2_inode), group_desc_table[i].bg_inode_table * block_size + sizeof(struct ext2_inode) * (j * 8 + k));
+            uint32_t i_blocks = inode.i_blocks / (2 << superblock.s_log_block_size);
+            if (i_blocks > 10) {
+              struct blk_t *head = read_inode_blocks(inode_idx);
+              struct blk_t *temp = head;
+              uint32_t entry_idx = 0;
+              uint32_t prev_containing_block = -1;
+
+              while (temp != NULL) {
+                if (temp->containing_block == -1) {
+                  temp = temp->next;
+                  entry_idx = 0;
+                  continue;
+                }
+                // this way of telling if we should restart the counter works as our scan is sequential (per-indirect-block)
+                if (prev_containing_block != temp->containing_block) {
+                  entry_idx = 0;
+                }
+                ret = sprintf(output_buffer, "%x,%u,%x\n", 
+                  temp->containing_block, entry_idx, temp->addr / block_size);
+                write(ofd, output_buffer, ret);
+                entry_idx ++;
+                prev_containing_block = temp->containing_block;
+
+                temp = temp->next;
+              }
+              
+            }
+          }
+          inode_idx ++;
+        } else {
+          done = 1;
+          break;
+        }
+      }
+    }
+  }
+  free(inode_bitmap_block);
+  return 1;
+}
+
 int main(int argc, char **argv) {
   if (argc > 2) {
     perror("Unexpected amount of arguments");
@@ -484,6 +555,7 @@ int main(int argc, char **argv) {
   write_bitmap_entry();
   write_inodes();
   write_directory_entries();
+  write_indirect();
 
   return 0;
 }
