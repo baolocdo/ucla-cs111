@@ -297,7 +297,7 @@ int write_superblock() {
   else
     fragment_size = 1024 >> -fragment_shift;
 
-  int ofd = creat("my-super.csv", 0666);
+  int ofd = creat("super.csv", 0666);
   if (ofd < 0) {
     perror("Unable to open output file");
     exit(1);
@@ -326,7 +326,7 @@ int write_group_descriptor() {
     exit(1);
   }
 
-  int ofd = creat("my-group.csv", 0666);
+  int ofd = creat("group.csv", 0666);
   if (ofd < 0) {
     perror("Unable to open output file");
     exit(1);
@@ -351,7 +351,7 @@ int write_group_descriptor() {
 
 // write the bitmap entries
 int write_bitmap_entry() {
-  int ofd = creat("my-bitmap.csv", 0666);
+  int ofd = creat("bitmap.csv", 0666);
   if (ofd < 0) {
     perror("Unable to open output file");
     exit(1);
@@ -418,7 +418,7 @@ int write_bitmap_entry() {
 
 // write the inodes
 int write_inodes() {
-  int ofd = creat("my-inode.csv", 0666);
+  int ofd = creat("inode.csv", 0666);
   if (ofd < 0) {
     perror("Unable to open output file");
     exit(1);
@@ -480,7 +480,7 @@ int write_inodes() {
 // write the directory entries
 int write_directory_entries() {
   // similar code as inode_traversal; did not record inode_traversal results so that each of these functions can work by themselves
-  int ofd = creat("my-directory.csv", 0666);
+  int ofd = creat("directory.csv", 0666);
   if (ofd < 0) {
     perror("Unable to open output file");
     exit(1);
@@ -557,7 +557,7 @@ int write_directory_entries() {
 
 int write_indirect() {
   // similar code as inode_traversal; did not record inode_traversal results so that each of these functions can work by themselves
-  int ofd = creat("my-indirect.csv", 0666);
+  int ofd = creat("indirect.csv", 0666);
   if (ofd < 0) {
     perror("Unable to open output file");
     exit(1);
