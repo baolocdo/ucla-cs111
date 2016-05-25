@@ -1,0 +1,58 @@
+Lists:
+Inode bitmap block (group.csv)
+Block bitmap block (group.csv)
+Inode freelist
+Block freelist
+
+Dict (inode/block num, inode/block object):
+Inode Allocated
+Block Allocated (include the bitmap blocks from group.csv, etc)
+Indirect table (block num and entry num, ptr) (6.indirect block entry)
+Directory table (entry inode, parent inode; indirect.csv)
+
+Class:
+Inode: inode number; referenced by (list): <directory(parent) inode, entry number>; number of links; pointers_list
+Block: block number; referenced by (list (of inodes?)): <inode number, indirect block number, entry number>
+
+for the 12 data blocks (entry_num from 0 to 11):
+  if block_num == 0 or block_num > max_number:
+    invalid_block_error
+  elif block_num in block allocated:
+    add to referenced by
+
+for the 3 indirect blocks:
+  check validity
+  (check as many blocks as needed as pointed out by number of blocks)
+
+for each directory entry (or so it seems): 
+  if child.inode != parent.inode or parent.inode == 2 (reserved for root):
+    store child inode and parent inode into directory table
+  if child.inode in inode allocated:
+    store element in referenced by list of inode
+  else:
+    unallocated_inode_error
+  Check . and .. (for entry No. 0, check if child.inode == parent.inode; for entry No. 1 if child.inode == directory[parent.inode], good, otherwise output incorrect_entry); may output incorrect_entry_error
+
+for each inode in allocated:
+  link_count = len(referenced by)
+  # First 10 inodes are reserved
+  if inode_number > 10 and link_count == 0:
+    missing_inode_error
+  elif link_count != inode.number_of_links:
+    incorrect_link_count_error
+    current count: inode.number_of_links
+    should be count: len(referenced by)
+
+if inodes in both inode_free_list and allocated: (verify)
+  unallocated_inode_error
+
+for x in [11, allocated inode number]:
+  if x not in either lists:
+    missing_inode_error
+
+for block in allocated:
+  if (len(referenced by)) > 1:
+    multiple_reference_error
+
+then check for unallocated_block_error, but not missing_block_error
+  

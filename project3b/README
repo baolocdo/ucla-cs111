@@ -1,0 +1,27 @@
+Project 3A
+==================
+Zhehao Wang
+404380075
+zhehao@cs.ucla.edu
+
+*** Contents ***
+
+* lab3a.c      - the test driver
+* Makefile
+* README       - this file
+
+*** Notes ***
+
+Only myself in my group.
+
+Two observations on indirect.csv:
+
+ - Spec didn't clear up details on "indirect.csv: expected output order of triple indirect blocks" (DFS vs BFS). See my piazza question "https://piazza.com/class/imeeybs22db6n?cid=359".
+
+ - Also, I saw in the footnote that indirect/double/triple pointing at block 0 is handled differently, however, in the doc I also see that
+"A value of 0 in this array (i_block) effectively terminates it with no further block being defined. All the remaining entries of the array should still be set to 0."
+  So this code took the liberty to assume that the reference implementation is not handling data block 0 (pointed to by any indirect/double/triple blocks) correctly, and ignores all indirect pointers to data block 0.
+
+*** Testing methodology ***
+
+CSV output were collected on seasnet lnxsrv07. Passed check with disk-image but can't guarantee any others, especially corrupted FS, or one that does not follow (ext2-rev1-Linux, for example, if it's not intended for "Linux", the upper 16 bits of uid and gid in an inode may be located at a different "OS dependent" location).
