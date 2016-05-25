@@ -209,7 +209,7 @@ class CsvParser(object):
     self.readDirectory()
     return
 
-  def writeErrors(self, filename = "my_check.txt"):
+  def writeErrors(self, filename = "lab3b_check.txt"):
     outputFile = open(filename, 'w')
 
     for entry in sorted(self._unallocatedInodes):
