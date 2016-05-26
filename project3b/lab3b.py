@@ -194,7 +194,7 @@ class CsvParser(object):
     if blockNumber == 0 or blockNumber > self._blocksCnt:
       self._invalidBlocks.append((blockNumber, inodeNumber, indirectBlockNumber, entryNum))
     else:
-      # check if we need a dict to store the referenced by; check if this null handling is correct
+      # check if this null handling is correct
       if blockNumber not in self._blockDict:
         self._blockDict[blockNumber] = Block(blockNumber)
       self._blockDict[blockNumber]._referencedBy.append((inodeNumber, indirectBlockNumber, entryNum))
