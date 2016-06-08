@@ -1,0 +1,67 @@
+Connecting to: 164.67.194.240:5000
+Client-Server connection complete with AES256-SHA encryption
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 72.72' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 72.72' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 69.16' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 69.16' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 72.26' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 72.26' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 72.39' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 72.39' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 73.29' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 73.29' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 70.86' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 70.86' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 66.13' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 66.13' from server.
+
+Current settings: rate: 3, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 67.94' to server...
+New rate 1 received from server.
+Received message 'Heart rate of patient 128.97.152.37 is 67.94 new_rate: 1' from server.
+
+New rate 1 received from server.
+Received message 'Heart rate of patient 128.97.152.37 is 67.94 new_rate: 1' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 67.10' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 67.10' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 72.43' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 72.43' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 67.25' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 67.25' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 69.21' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 69.21' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 67.04' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 67.04' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 66.87' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 66.87' from server.
+
+Current settings: rate: 1, range: 4
+Sending message 'Heart rate of patient 128.97.152.37 is 73.99' to server...
+Received message 'Heart rate of patient 128.97.152.37 is 73.99' from server.
+
+
