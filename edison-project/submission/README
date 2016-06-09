@@ -4,57 +4,56 @@ zhehao@cs.ucla.edu
 
 * Lab4-B-1
 
-The heart rate is sent to server in plain text, and received from server in plain text. 
-Security implication's that if someone's sniffing the network, he'll be able to see the plain text message and know another person's heart rate.
+The data is sent to server in plain text, and received from server in plain text. 
+Security implication's that if someone's sniffing the network, he'll be able to see the plain text message.
 
 * Lab4-B-2
 
-Output of the sniffer contains the UDP payload, which can de directly decoded from its network encoding into plain text, thus exposing user's (IP address, health rate data) to anyone sniffing the network.
+Output of the sniffer contains the UDP payload, which can de directly decoded into plain text, thus exposing user's <IP address, health rate data> to anyone sniffing the network.
 
 * Lab4-B-3
 
-Executed "./set_rate 5" (plain text to UDP port 8000).
-UDP server replied with 1 heart rate update message (appended to the heart rate echo response). 
-Whereas output before has interval of 3, output afterwards has interval of 5. In each while loop, the client now sleeps 2 more seconds than before. 
+We executed "./set_rate 5" (which sends plain text command to UDP port 8000).
+UDP server replied with 1 rate update message appended to ordinary echo response. 
+Whereas before output has interval of 3, output now has interval of 5.
 The heart rate values in later sent and received messages still match.
 
 * Lab4-B-4
 
-Rate is "maliciously" changed to 15 (by malicious, we meant that set by a different program that issues the same valid command).
-Whereas output before has interval of 5, output afterwards has interval of 15.
+Rate is "maliciously" changed to 15 (by malicious, we mean that it’s set by a different program that issues the same valid command).
+Whereas before output has interval of 5, output now has interval of 15.
 
 * Lab4-D-1
 
-The messages before encryption and after decryption still match: same heart rate value from each pair of send and receive in the while loop.
-What's sent in the network is symmetrically encrypted.
+We can see that what's sent in the network is symmetrically encrypted. And the messages before encryption and after decryption still match: same heart rate value from each pair of send and receive in the while loop.
 
 * Lab4-D-2
 
-The sniffer captures packets in the network, which are symmetrically encrypted, unlike in B which are plain text bytes. In D the content can no longer be just decoded into plain text showing user heart rate.
+The sniffer captures packets in the network, which are symmetrically encrypted, unlike in B which are plain text bytes. In D the content can no longer be just decoded into plain text showing user data, thus introducing confidentiality to the system.
 
 * Lab4-D-3
 
-Executed "./set_rate 1" (TLS encrypted text to TCP 5000).
-UDP server replied with 2 heart rate update message (appended to the heart rate response of the same heart rate message client sent). 
-Because of the 1 extra response, the heart rate values in later sent and received messages no longer match since in each while loop we do one send and on receive. "ssl_read" is behind by 1 message.
-Whereas output before has interval of 3, output afterwards has interval of 1. In each while loop, the client now sleeps 2 less seconds than before. 
+We executed "./set_rate 1" (which sends TLS encrypted command to TCP 5000).
+UDP server replied with 2 heart rate update messages (both appended to the same ordinary response). 
+Because of the 1 extra response, the heart rate values in later sent and received messages no longer match since in each while loop we do only 1 send and 1 receive. Later “ssl_read" is behind by 1 message.
+Whereas before output has interval of 3, output now has interval of 1.
 
 * Lab4-D-4
 
 Rate remains unchanged after attack script's executed.
-The attack script sends plain text message "set rate 15" to host:UDP port 5000. And the server does not act according to this set rate. 
-(Minor detail: this could be that server tries decrypt and gets rubbish, or that server doesn't have anything listening on UDP port 5000 at all, or whatever other server side logic).
+The attack script sends plain text command to host:UDP port 5000. And the server does not act according to this set rate.
+(Minor detail: this could be that server tries decrypt and gets rubbish, or that server doesn't have anything listening on UDP port 5000 at all, or whatever other server side logic to prevent action from receiving commands in plain text).
 
 * Lab4-E
 
-Executed "./set_rate 1".
-UDP server has the same reply as Lab4-D-3, but the messages after "set rate" still have matching sent and received heart rate values.
-This is because the "only one pair of send and receive in each loop logic" is no longer there. Because of having two threads, client sends whenever the interval expires, and receives whenever there is something to receive; thus the client's no longer behind, after the extra response.
+We executed "./set_rate 1".
+Different from Lab4-D-3, the sent and received messages on client side after "set rate" still have matching heart rate values.
+This is because the "only one pair of send and receive in each loop” logic is no longer there. Because of having two threads, client sends whenever the interval expires, and receives whenever there is something to receive; thus even with one extra response, the client won’t get behind.
 As shown in log, when setting rate, client no longer has a "sending message" log entry before the 2nd "set rate" response from the server.
 
 * Log file format
 
-The log has default name "tls.log", and logs client IP address, TLS connection response, each messages sent and received. These all have the same format as the strings in the printf of the original code.
+The log has default name "tls.log", and logs client IP address, TLS connection response, and messages sent and received. These all have the same format as the strings in the printf of the original code.
 Log gets overwritten per execution.
 
 * Description of received messages
